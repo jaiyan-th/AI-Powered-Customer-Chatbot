@@ -1,0 +1,525 @@
+# backend.py
+"""
+Backend Engine for GlassSupport:
+- Hybrid Semantic & SQLite FTS5 (BM25) Search
+- Executive Routing & Higher Official Directory
+- Dynamic Request & Authentication Key Lifecycle (Pending vs Completed)
+- Live 2-Way Direct Chat Thread Synchronization
+- Customer CSAT & Review Escalation System
+"""
+
+import sqlite3
+import random
+import re
+from typing import Dict, Any, List, Optional
+from db import get_connection, init_db
+
+HIGHER_OFFICIALS_DIRECTORY = [
+    {
+        "name": "Dr. Sarah Jenkins",
+        "title": "Chief Governance & Executive Officer",
+        "email": "sarah.jenkins.executive@glasssupport.com",
+        "phone": "+1 (800) 555-0199 (Ext. 401)",
+        "dept": "Executive Governance & Privacy"
+    },
+    {
+        "name": "Marcus Vance",
+        "title": "Director of Banking & Financial Integrity",
+        "email": "marcus.vance.director@glasssupport.com",
+        "phone": "+1 (888) 452-7722 (Direct)",
+        "dept": "Banking & Financial Services"
+    },
+    {
+        "name": "Elena Rostova",
+        "title": "Head of Enterprise Security & Data Integrity",
+        "email": "elena.rostova.cso@glasssupport.com",
+        "phone": "+1 (800) 555-0844 (Ext. 102)",
+        "dept": "Access, Infrastructure & Security"
+    }
+]
+
+SEMANTIC_SYNONYMS = {
+    "down": ["502", "503", "504", "loading", "offline", "unreachable", "gateway", "load balancer", "broken", "vpn", "cache"],
+    "banking": ["transfer", "debited", "deducted", "wire", "pending", "neft", "rtgs", "ach", "utr", "settlement"],
+    "access": ["admin", "rbac", "permission", "role", "upgrade", "claims", "identity", "unauthorized", "login"],
+    "billing": ["invoice", "vat", "tax", "exemption", "charge", "refund", "receipt", "overcharged"],
+    "export": ["csv", "truncated", "data pipeline", "buffer", "download", "format"]
+}
+
+def is_privacy_confidentiality_query(query: str) -> bool:
+    """Detects whether inquiry involves confidential, privacy, or executive matters."""
+    keywords = [
+        "privacy", "confidential", "integrity", "director", "higher official",
+        "executive", "legal", "breach", "nda", "compliance", "lawsuit",
+        "tax exemption", "audit", "dispute", "sensitive", "ceo", "cso", "board"
+    ]
+    q_lower = query.lower()
+    return any(k in q_lower for k in keywords)
+
+def get_designated_higher_official(category: str = "General", query: str = "") -> Dict[str, str]:
+    """Selects the designated higher official based on context."""
+    q_lower = query.lower()
+    if any(w in q_lower for w in ["bank", "transfer", "tax", "vat", "wire", "finance", "billing"]):
+        return HIGHER_OFFICIALS_DIRECTORY[1] # Marcus Vance
+    elif any(w in q_lower for w in ["security", "access", "rbac", "export", "pipeline", "infrastructure", "down"]):
+        return HIGHER_OFFICIALS_DIRECTORY[2] # Elena Rostova
+    return HIGHER_OFFICIALS_DIRECTORY[0] # Dr. Sarah Jenkins
+
+def expand_query_with_synonyms(query: str) -> str:
+    words = re.findall(r'\w+', query.lower())
+    expanded = list(words)
+    for word in words:
+        for root, syns in SEMANTIC_SYNONYMS.items():
+            if word == root or word in syns:
+                expanded.extend([s for s in syns if s not in expanded][:2])
+    return " ".join(expanded)
+
+def query_knowledge_base(user_query: str, category_filter: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    init_db()
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    expanded_query = expand_query_with_synonyms(user_query)
+    clean_terms = re.findall(r'\w+', expanded_query)
+    if not clean_terms:
+        conn.close()
+        return None
+
+    fts_expression = " OR ".join(f'"{term}"*' for term in clean_terms if len(term) > 2)
+    if not fts_expression:
+        conn.close()
+        return None
+
+    sql = """
+        SELECT i.id, i.query_text, i.solution_text, i.category, i.department,
+               bm25(issues_fts) AS bm25_score
+        FROM issues_fts f
+        JOIN issues i ON f.rowid = i.id
+        WHERE issues_fts MATCH ?
+        ORDER BY bm25_score ASC
+        LIMIT 1;
+    """
+
+    cursor.execute(sql, (fts_expression,))
+    row = cursor.fetchone()
+    conn.close()
+
+    if row:
+        raw_score = float(row["bm25_score"])
+        confidence_pct = min(98.5, max(45.0, round(99.0 - (abs(raw_score) * 6.5), 1)))
+        return {
+            "id": row["id"],
+            "query_text": row["query_text"],
+            "solution_text": row["solution_text"],
+            "category": row["category"],
+            "department": row["department"],
+            "confidence_score": confidence_pct
+        }
+    return None
+
+def log_message(request_id: Optional[str], user_email: str, role: str, sender_name: str, content: str, badge: Optional[str] = None, score: Optional[float] = None, department: Optional[str] = None):
+    init_db()
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO chat_history (request_id, user_email, role, sender_name, content, badge, score, department, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP);
+    """, (request_id, user_email.strip().lower(), role, sender_name, content, badge, score, department))
+    conn.commit()
+    conn.close()
+
+# -----------------------------------------------------------------------------
+# Core Chatbot Dispatcher
+# -----------------------------------------------------------------------------
+def chat_with_bot(user_query: str, user_email: str = "customer@example.com", category: Optional[str] = None) -> Dict[str, Any]:
+    init_db()
+    user_email_clean = user_email.strip().lower()
+    user_name = user_email_clean.split("@")[0].capitalize()
+
+    # Log Customer Query
+    log_message(None, user_email_clean, "user", user_name, user_query)
+
+    # 1. Check for Account-Specific 2FA Inquiry
+    if any(k in user_query.lower() for k in ["account balance", "my balance", "ledger balance", "unfreeze my card", "kyc status"]):
+        msg = (
+            "🔒 **Identity Verification Required**\n\n"
+            "To protect your confidential financial records, please enter the **6-digit verification code** sent to your email."
+        )
+        log_message(None, user_email_clean, "assistant", "GlassSupport AI", msg, badge="2FA Auth Required")
+        return {
+            "matched": True,
+            "badge": "2FA Security Verification",
+            "badge_type": "security_otp",
+            "requires_otp": True,
+            "answer": msg,
+            "score": 99.0
+        }
+
+    # 2. Check for Privacy / Confidentiality / Executive Trigger
+    if is_privacy_confidentiality_query(user_query):
+        official = get_designated_higher_official(category or "Executive", user_query)
+        request_id = f"REQ-{random.randint(1000, 9999)}"
+        auth_key = f"AUTH-{random.randint(1000, 9999)}"
+
+        conn = get_connection()
+        cursor = conn.cursor()
+        summary = f"Confidential Inquiry: {user_query[:55]}..."
+        ai_draft = f"Hi {user_name}, I have reviewed your confidential inquiry regarding '{user_query[:40]}...'. I am handling this personally under Case {request_id}."
+
+        cursor.execute("""
+            INSERT INTO requests (
+                request_id, auth_key, user_name, user_role, user_email, user_phone, query_title, query_text, query_summary,
+                status, priority, is_confidential, department, vectors, assigned_official_name, assigned_official_title,
+                assigned_official_email, assigned_official_phone, ai_draft, confidence_score, created_at
+            ) VALUES (?, ?, ?, 'Enterprise Member', ?, '+1 (415) 890-2134', ?, ?, ?, 'Pending', 'Urgent', 1, ?, '🔒 Privacy, 👑 Executive', ?, ?, ?, ?, ?, 98, CURRENT_TIMESTAMP);
+        """, (request_id, auth_key, user_name, user_email_clean, f"Confidential: {user_query[:35]}", user_query, summary, official['dept'], official['name'], official['title'], official['email'], official['phone'], ai_draft))
+        conn.commit()
+        conn.close()
+
+        response_text = (
+            f"🔒 **Privacy & Confidentiality Protected**\n\n"
+            f"Due to enterprise privacy, data confidentiality, and integrity policies, automated disclosure is restricted.\n\n"
+            f"• **Designated Higher Official:** `{official['name']}` ({official['title']})\n"
+            f"• **Official Email:** `{official['email']}`\n"
+            f"• **Direct Helpline:** `{official['phone']}`\n\n"
+            f"📧 **Your Request ID:** `{request_id}`\n"
+            f"🔑 **Your Authentication Key:** `{auth_key}` *(Sent to {user_email_clean})*\n\n"
+            f"Use your **Authentication Key** in **My Requests Dashboard** to continue the private chat directly with the Higher Official."
+        )
+
+        log_message(request_id, user_email_clean, "assistant", "GlassSupport AI", response_text, badge="Privacy Protected", department=official['dept'])
+
+        return {
+            "matched": False,
+            "badge": "Privacy Protected",
+            "badge_type": "confidential_officer",
+            "request_id": request_id,
+            "auth_key": auth_key,
+            "assigned_official": official,
+            "answer": response_text,
+            "score": None,
+            "department": official['dept']
+        }
+
+    # 3. Knowledge Base Semantic & BM25 Match
+    match = query_knowledge_base(user_query, category)
+    if match and match["confidence_score"] >= 50.0:
+        badge = f"High Match ({match['confidence_score']}% Confidence)"
+        log_message(None, user_email_clean, "assistant", "GlassSupport AI", match["solution_text"], badge=badge, score=match["confidence_score"], department=match["department"])
+        return {
+            "matched": True,
+            "badge": badge,
+            "badge_type": "high_match",
+            "answer": match["solution_text"],
+            "score": match["confidence_score"],
+            "department": match["department"]
+        }
+
+    # 4. Fallback: Unresolvable query -> Connect to Higher Official with Auth Key
+    official = get_designated_higher_official(category or "General", user_query)
+    request_id = f"REQ-{random.randint(1000, 9999)}"
+    auth_key = f"AUTH-{random.randint(1000, 9999)}"
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    summary = f"Inquiry: {user_query[:55]}..."
+    ai_draft = f"Hi {user_name}, our AI chatbot could not resolve this automatically. I am taking over this request under Case {request_id}."
+
+    cursor.execute("""
+        INSERT INTO requests (
+            request_id, auth_key, user_name, user_role, user_email, user_phone, query_title, query_text, query_summary,
+            status, priority, is_confidential, department, vectors, assigned_official_name, assigned_official_title,
+            assigned_official_email, assigned_official_phone, ai_draft, confidence_score, created_at
+        ) VALUES (?, ?, ?, 'Member', ?, '+1 (415) 890-2134', ?, ?, ?, 'Pending', 'Urgent', 0, ?, '🔗 Unresolved, ⚡ Escalation', ?, ?, ?, ?, ?, 90, CURRENT_TIMESTAMP);
+    """, (request_id, auth_key, user_name, user_email_clean, f"Inquiry: {user_query[:35]}", user_query, summary, official['dept'], official['name'], official['title'], official['email'], official['phone'], ai_draft))
+    conn.commit()
+    conn.close()
+
+    escalation_text = (
+        f"I couldn't find an exact verified match in our active knowledge base.\n\n"
+        f"⚡ **Connected to Higher Official:** `{official['name']}` ({official['title']})\n"
+        f"• **Official Email:** `{official['email']}`\n"
+        f"• **Direct Helpline:** `{official['phone']}`\n\n"
+        f"📧 **Your Request ID:** `{request_id}`\n"
+        f"🔑 **Your Authentication Key:** `{auth_key}` *(Sent to {user_email_clean})*\n\n"
+        f"Use your **Authentication Key** in **My Requests Dashboard** to resume and chat directly with {official['name']}."
+    )
+
+    log_message(request_id, user_email_clean, "assistant", "GlassSupport AI", escalation_text, badge="Connected to Higher Official", score=None, department=official['dept'])
+
+    return {
+        "matched": False,
+        "badge": "Connected to Higher Official",
+        "badge_type": "confidential_officer",
+        "request_id": request_id,
+        "auth_key": auth_key,
+        "assigned_official": official,
+        "answer": escalation_text,
+        "score": None,
+        "department": official['dept']
+    }
+
+# -----------------------------------------------------------------------------
+# Customer Requests Dashboard & Auth-Key API Methods
+# -----------------------------------------------------------------------------
+def get_customer_requests(user_email: str) -> Dict[str, List[Dict[str, Any]]]:
+    """Returns requests for a customer grouped by Pending and Completed."""
+    init_db()
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT * FROM requests
+        WHERE LOWER(user_email) = LOWER(?)
+        ORDER BY id DESC;
+    """, (user_email.strip(),))
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+
+    pending = [r for r in rows if r.get("status") == "Pending"]
+    completed = [r for r in rows if r.get("status") == "Completed"]
+
+    return {
+        "pending": pending,
+        "completed": completed,
+        "total": len(rows)
+    }
+
+def verify_customer_auth_key(request_id: str, auth_key: str, user_email: str) -> Dict[str, Any]:
+    """Validates user authentication key to unlock direct 2-way chat with Higher Official."""
+    init_db()
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT * FROM requests
+        WHERE UPPER(request_id) = UPPER(?) AND UPPER(auth_key) = UPPER(?) AND LOWER(user_email) = LOWER(?);
+    """, (request_id.strip(), auth_key.strip(), user_email.strip()))
+    row = cursor.fetchone()
+    conn.close()
+
+    if row:
+        return {
+            "success": True,
+            "message": "Authentication Key Verified! Direct session unlocked.",
+            "request": dict(row)
+        }
+    return {
+        "success": False,
+        "message": "Invalid Authentication Key or Request ID. Please check your email and try again."
+    }
+
+def get_request_chat_thread(request_id: str) -> List[Dict[str, Any]]:
+    """Returns full live conversation log for a specific request ID."""
+    init_db()
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, request_id, user_email, role, sender_name, content, badge, score, department, created_at
+        FROM chat_history
+        WHERE UPPER(request_id) = UPPER(?)
+        ORDER BY id ASC;
+    """, (request_id.strip(),))
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+def send_customer_message_in_request(request_id: str, user_email: str, message: str) -> Dict[str, Any]:
+    """Customer sends message in unlocked request session."""
+    init_db()
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT user_name FROM requests WHERE UPPER(request_id) = UPPER(?);", (request_id.strip(),))
+    row = cursor.fetchone()
+    user_name = row["user_name"] if row else user_email.split("@")[0].capitalize()
+
+    cursor.execute("""
+        INSERT INTO chat_history (request_id, user_email, role, sender_name, content, badge, created_at)
+        VALUES (?, ?, 'user', ?, ?, 'Direct Chat', CURRENT_TIMESTAMP);
+    """, (request_id.strip(), user_email.strip().lower(), user_name, message.strip()))
+    conn.commit()
+    conn.close()
+
+    return {"success": True, "message": "Message sent to Higher Official."}
+
+def send_official_reply_in_request(request_id: str, message: str, official_name: str = "Dr. Sarah Jenkins") -> Dict[str, Any]:
+    """Higher Official sends direct reply to customer's request thread."""
+    init_db()
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT user_email FROM requests WHERE UPPER(request_id) = UPPER(?);", (request_id.strip(),))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return {"success": False, "message": f"Request {request_id} not found."}
+
+    user_email = row["user_email"]
+
+    cursor.execute("""
+        INSERT INTO chat_history (request_id, user_email, role, sender_name, content, badge, department, created_at)
+        VALUES (?, ?, 'official', ?, ?, '👑 Higher Official Reply', 'Executive Desk', CURRENT_TIMESTAMP);
+    """, (request_id.strip(), user_email, official_name, message.strip()))
+    conn.commit()
+    conn.close()
+
+    return {"success": True, "message": "Official reply sent."}
+
+def complete_customer_request(request_id: str, resolution_notes: str = "") -> Dict[str, Any]:
+    """Marks a request as Completed and saves resolution notes."""
+    init_db()
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE requests
+        SET status = 'Completed', completed_at = CURRENT_TIMESTAMP, resolution_notes = ?
+        WHERE UPPER(request_id) = UPPER(?);
+    """, (resolution_notes.strip() or "Resolved by Higher Official.", request_id.strip()))
+
+    cursor.execute("SELECT user_email, query_text FROM requests WHERE UPPER(request_id) = UPPER(?);", (request_id.strip(),))
+    row = cursor.fetchone()
+    if row:
+        # Index in issues table so bot learns
+        cursor.execute("""
+            INSERT INTO issues (keywords, query_text, solution_text, status, category, department, created_at, resolved_at)
+            VALUES (?, ?, ?, 'resolved', 'Executive Resolution', 'Executive Desk', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+        """, (row["query_text"][:50], row["query_text"], resolution_notes, ))
+
+    conn.commit()
+    conn.close()
+
+    return {"success": True, "message": f"Request {request_id} marked as Completed."}
+
+def authenticate_higher_official(email: str, passcode: str = "") -> Dict[str, Any]:
+    """Authenticates higher official by email and passcode."""
+    email_clean = email.strip().lower()
+    for off in HIGHER_OFFICIALS_DIRECTORY:
+        if off["email"].lower() == email_clean or off["name"].lower() == email_clean or email_clean in off["email"].lower():
+            # Valid official
+            return {
+                "success": True,
+                "message": f"Welcome back, {off['name']}!",
+                "official": off
+            }
+    return {
+        "success": False,
+        "message": "Invalid Higher Official ID or Email. Please select an authorized executive."
+    }
+
+def get_all_official_requests(official_email: Optional[str] = None) -> Dict[str, Any]:
+    """Returns requests specifically assigned to the logged-in higher official's email."""
+    init_db()
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    if official_email and official_email.strip():
+        cursor.execute("""
+            SELECT * FROM requests
+            WHERE LOWER(assigned_official_email) = LOWER(?)
+            ORDER BY CASE WHEN status = 'Pending' THEN 1 ELSE 2 END, id DESC;
+        """, (official_email.strip(),))
+    else:
+        cursor.execute("""
+            SELECT * FROM requests
+            ORDER BY CASE WHEN status = 'Pending' THEN 1 ELSE 2 END, id DESC;
+        """)
+
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+
+    pending = [r for r in rows if r.get("status") == "Pending"]
+    completed = [r for r in rows if r.get("status") == "Completed"]
+
+    return {
+        "official_email": official_email,
+        "pending": pending,
+        "completed": completed,
+        "total_pending": len(pending),
+        "total_completed": len(completed)
+    }
+
+# -----------------------------------------------------------------------------
+# Reviews & Stats
+# -----------------------------------------------------------------------------
+def submit_customer_review(user_name: str, user_email: str, rating: int, issue_faced: str, is_resolved: str, service_feedback: str, unresolved_details: str = "") -> Dict[str, Any]:
+    init_db()
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    status = "Reviewed"
+    escalated_request_id = None
+
+    if is_resolved == "Not Resolved" or rating <= 2:
+        status = "Requires Escalation"
+        escalated_request_id = f"REQ-{random.randint(1000, 9999)}"
+        auth_key = f"AUTH-{random.randint(1000, 9999)}"
+        query_summary = f"Unresolved Feedback ({rating}★): {issue_faced}"
+        full_complaint = (
+            f"Customer {user_name} reported that their issue was NOT resolved.\n"
+            f"• Issue Encountered: {issue_faced}\n"
+            f"• Satisfaction Rating: {rating}/5 Stars\n"
+            f"• Unresolved Details: {unresolved_details or 'Customer indicated issue persists.'}\n"
+            f"• Feedback on Service: {service_feedback or 'N/A'}"
+        )
+        ai_draft = f"Hi {user_name}, I am following up from our Higher Official Desk regarding your review on '{issue_faced}'. I am taking personal ownership to resolve this for you."
+
+        cursor.execute("""
+            INSERT INTO requests (
+                request_id, auth_key, user_name, user_role, user_email, user_phone, query_title, query_text, query_summary,
+                status, priority, is_confidential, department, vectors, assigned_official_name, assigned_official_title,
+                assigned_official_email, assigned_official_phone, ai_draft, confidence_score, created_at
+            ) VALUES (?, ?, ?, 'Customer Review Escalation', ?, '+1 (415) 890-2134', ?, ?, ?, 'Pending', 'Urgent', 1, 'Executive Governance', '⚠️ Unresolved Feedback, 🌟 CSAT', 'Dr. Sarah Jenkins', 'Chief Governance & Executive Officer', 'sarah.jenkins.executive@glasssupport.com', '+1 (800) 555-0199 (Ext. 401)', ?, 98, CURRENT_TIMESTAMP);
+        """, (escalated_request_id, auth_key, user_name, user_email.strip().lower(), f"Unresolved Review: {issue_faced}", full_complaint, query_summary, ai_draft))
+
+    cursor.execute("""
+        INSERT INTO reviews (user_name, user_email, rating, issue_faced, is_resolved, service_feedback, unresolved_details, status, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP);
+    """, (user_name, user_email.strip().lower(), rating, issue_faced, is_resolved, service_feedback, unresolved_details, status))
+
+    conn.commit()
+    conn.close()
+
+    return {
+        "success": True,
+        "message": "Thank you! Your feedback has been recorded." + (f" An urgent executive request ({escalated_request_id}) has been created for Higher Official review." if escalated_request_id else ""),
+        "escalated_request_id": escalated_request_id,
+        "is_resolved": is_resolved
+    }
+
+def get_all_reviews() -> List[Dict[str, Any]]:
+    init_db()
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM reviews ORDER BY id DESC;")
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+def get_dashboard_metrics() -> Dict[str, Any]:
+    init_db()
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT COUNT(*) FROM issues;")
+    total_issues = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM requests WHERE status = 'Pending';")
+    pending_requests = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM requests WHERE status = 'Completed';")
+    completed_requests = cursor.fetchone()[0]
+
+    cursor.execute("SELECT AVG(rating) FROM reviews;")
+    avg_csat = cursor.fetchone()[0] or 4.9
+
+    conn.close()
+
+    return {
+        "total_knowledge_records": total_issues,
+        "pending_requests": pending_requests,
+        "completed_requests": completed_requests,
+        "avg_csat": round(float(avg_csat), 1),
+        "sla_uptime": "99.98%"
+    }

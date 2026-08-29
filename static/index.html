@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSP (Customer Support Provider) — Customer Support Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+    <div class="app-layout">
+        
+        <!-- LEFT SIDEBAR -->
+        <aside class="app-sidebar">
+            <div class="brand-header">
+                <div class="brand-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#4338CA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 17L12 22L22 17" stroke="#4F46E5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 12L12 17L22 12" stroke="#6366F1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <span class="brand-title">GlassSupport</span>
+            </div>
+
+            <nav class="sidebar-nav">
+                <!-- Tab 1: Live Customer Chat -->
+                <button class="nav-btn active" id="tab-chat" onclick="switchView('chat')">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    <span>Support Chat</span>
+                </button>
+
+                <!-- Tab 2: Customer Request Dashboard (Pending & Completed) -->
+                <button class="nav-btn" id="tab-requests" onclick="switchView('requests')">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                    <span>My Requests</span>
+                </button>
+
+                <!-- Tab 3: Higher Officials Desk -->
+                <button class="nav-btn" id="tab-dashboard" onclick="switchView('dashboard')">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    </svg>
+                    <span>Higher Officials</span>
+                </button>
+
+                <!-- Tab 4: Service Reviews -->
+                <button class="nav-btn" id="tab-reviews" onclick="switchView('reviews')">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26 12 2"></polygon>
+                    </svg>
+                    <span>Service Reviews</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="agent-avatar">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    <span class="agent-live-dot"></span>
+                </div>
+                <div class="agent-meta">
+                    <div class="agent-title">Support Agent</div>
+                    <div class="agent-status">ACTIVE NOW</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN AREA -->
+        <div class="app-main">
+            
+            <!-- TOP APP BAR -->
+            <header class="app-topbar">
+                <div class="topbar-left">
+                    <span class="badge-enterprise">ENTERPRISE AI</span>
+                    <div class="sla-status-pill">
+                        <span class="pulse-dot"></span>
+                        <span>All Systems Operational • 99.98% SLA</span>
+                    </div>
+                </div>
+
+                <div class="topbar-right">
+                    <!-- User Persona Dropdown -->
+                    <div class="dropdown-agent-id">
+                        <span class="id-icon">📇</span>
+                        <select id="user-email-select" onchange="onUserIdentityChanged(this.value)">
+                            <option value="customer@example.com">customer@example.com (Guest)</option>
+                            <option value="a.chen@tech.io" selected>Alice Chen (a.chen@tech.io)</option>
+                            <option value="j.smith@corp.com">J. Smith (j.smith@corp.com)</option>
+                            <option value="r.woods@design.co">R. Woods (r.woods@design.co)</option>
+                        </select>
+                    </div>
+
+                    <!-- Voice TTS Toggle -->
+                    <button class="topbar-icon-btn" id="btn-tts-toggle" onclick="toggleVoiceSpeech()" title="Toggle Voice Response (TTS)">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M2 10a4 4 0 0 1 4-4h1l4-4v16l-4-4H6a4 4 0 0 1-4-4z"></path>
+                            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                        </svg>
+                    </button>
+
+                    <!-- Staff Portal Button -->
+                    <button class="btn-staff-pill" onclick="switchView('dashboard')">
+                        <span>Staff Portal</span>
+                    </button>
+
+                    <!-- Profile Circle -->
+                    <div class="profile-circle">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                    </div>
+                </div>
+            </header>
+
+            <!-- ============================================================= -->
+            <!-- VIEW 1: CUSTOMER SUPPORT CHAT -->
+            <!-- ============================================================= -->
+            <section id="view-chat" class="content-view active">
+                <div class="chat-container">
+                    
+                    <div class="date-chip">
+                        <span>TODAY, 10:42 AM</span>
+                    </div>
+
+                    <div class="chat-stream" id="chat-stream">
+                        <!-- Initial Fresh Assistant Welcome & Solution Card -->
+                        <div class="msg-bot-group">
+                            <div class="bot-icon-circle">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2">
+                                    <rect x="3" y="11" width="18" height="10" rx="2"/>
+                                    <circle cx="12" cy="5" r="2"/>
+                                    <path d="M12 7v4"/>
+                                    <line x1="8" y1="16" x2="8.01" y2="16"/>
+                                    <line x1="16" y1="16" x2="16.01" y2="16"/>
+                                </svg>
+                            </div>
+                            <div class="bot-card-content">
+                                <div class="bot-card-header">
+                                    <span class="bot-title">GlassSupport AI</span>
+                                    <span class="badge-high-match-green">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+                                        HIGH MATCH (98% CONFIDENCE)
+                                    </span>
+                                </div>
+                                <div class="bot-card-body">
+                                    <p>I see you're trying to resolve a 502 Bad Gateway error on the main dashboard. This usually indicates a temporary routing issue between our load balancers. Let's try to fix this in three steps:</p>
+                                    
+                                    <div class="steps-numbered-card">
+                                        <div class="step-item">
+                                            <div class="step-num">1</div>
+                                            <div class="step-text">Clear your browser cache and cookies for the last hour.</div>
+                                        </div>
+                                        <div class="step-item">
+                                            <div class="step-num">2</div>
+                                            <div class="step-text">Ensure you are connected to the corporate VPN (Gateway 4).</div>
+                                        </div>
+                                        <div class="step-item">
+                                            <div class="step-num">3</div>
+                                            <div class="step-text">Attempt a hard refresh (Cmd+Shift+R or Ctrl+F5) on the dashboard page.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="bot-card-footer">
+                                    <span class="feedback-prompt">Did this resolve your issue?</span>
+                                    <div class="feedback-btn-row">
+                                        <button class="btn-feedback" onclick="sendFeedback(true)">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>
+                                            Yes, it worked
+                                        </button>
+                                        <button class="btn-feedback" onclick="sendFeedback(false)">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"></path></svg>
+                                            No, still broken
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Typing indicator -->
+                    <div id="typing-indicator" class="typing-indicator hidden">
+                        <span>GlassSupport AI is retrieving solution...</span>
+                        <div class="dots-pulse">
+                            <span></span><span></span><span></span>
+                        </div>
+                    </div>
+
+                    <!-- Floating Glass Input Bar -->
+                    <form class="input-floating-bar" onsubmit="handleChatSubmit(event)">
+                        <button type="button" class="btn-input-icon" title="Attach file">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2" stroke-linecap="round">
+                                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+                            </svg>
+                        </button>
+                        <input type="text" id="chat-input" placeholder="Describe your issue or type a command..." autocomplete="off">
+                        <button type="button" class="btn-input-icon" id="btn-voice-mic" onclick="toggleVoiceRecording()" title="Speak with microphone">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                                <line x1="12" y1="19" x2="12" y2="23"></line>
+                                <line x1="8" y1="23" x2="16" y2="23"></line>
+                            </svg>
+                        </button>
+                        <button type="button" class="btn-input-icon" title="Emoji">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+                                <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                                <line x1="15" y1="9" x2="15.01" y2="9"></line>
+                            </svg>
+                        </button>
+                        <button type="submit" class="btn-input-send">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="22" y1="2" x2="11" y2="13"></line>
+                                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                            </svg>
+                        </button>
+                    </form>
+
+                </div>
+            </section>
+
+            <!-- ============================================================= -->
+            <!-- VIEW 2: CUSTOMER REQUESTS DASHBOARD (PENDING vs COMPLETED) -->
+            <!-- ============================================================= -->
+            <section id="view-requests" class="content-view">
+                <div class="requests-dashboard-container">
+                    
+                    <div class="req-dash-header">
+                        <div>
+                            <h1 class="desk-main-title">My Service Requests & Live Sessions</h1>
+                            <p class="page-subtitle" style="color:var(--text-muted);font-size:0.85rem;margin-top:2px;">
+                                Track ongoing requests, view completed solutions, and enter your Authentication Key to resume live chat with Higher Officials.
+                            </p>
+                        </div>
+                        <button class="btn-primary-action" onclick="switchView('chat')">
+                            + New Support Inquiry
+                        </button>
+                    </div>
+
+                    <!-- Customer Request Tabs (Pending vs Completed) -->
+                    <div class="req-tabs-nav">
+                        <button class="req-tab-btn active" id="btn-tab-pending" onclick="switchRequestTab('pending')">
+                            ⏳ Pending Requests <span class="tab-badge-pill" id="badge-pending-count">0</span>
+                        </button>
+                        <button class="req-tab-btn" id="btn-tab-completed" onclick="switchRequestTab('completed')">
+                            ✅ Completed Requests <span class="tab-badge-pill" id="badge-completed-count">0</span>
+                        </button>
+                    </div>
+
+                    <!-- Requests Grid Stream -->
+                    <div class="requests-grid" id="customer-requests-grid">
+                        <!-- Populated dynamically via JS -->
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- ============================================================= -->
+            <!-- VIEW 3: HIGHER OFFICIALS PORTAL (OFFICIAL LOGIN & MAILBOX) -->
+            <!-- ============================================================= -->
+            <section id="view-dashboard" class="content-view">
+                <div class="desk-container">
+                    
+                    <!-- 1. Higher Official Login Screen (Shown when not logged in) -->
+                    <div id="official-login-card" class="official-login-card-box">
+                        <div class="official-login-icon">🛡️</div>
+                        <h2 class="official-login-title">Higher Officials Authentication</h2>
+                        <p class="official-login-desc">
+                            Log in with your executive email / ID to access the confidential customer requests, live chat sessions, and escalated inquiries assigned to your mailbox.
+                        </p>
+
+                        <!-- Quick Official Presets -->
+                        <div class="official-presets-label">QUICK SELECT EXECUTIVE PROFILE:</div>
+                        <div class="official-presets-grid">
+                            <div class="preset-card active" onclick="selectOfficialPreset('sarah.jenkins.executive@glasssupport.com', 'Dr. Sarah Jenkins')">
+                                <div class="preset-avatar">👑</div>
+                                <div class="preset-meta">
+                                    <div class="preset-name">Dr. Sarah Jenkins</div>
+                                    <div class="preset-title">Chief Governance & Executive Officer</div>
+                                    <div class="preset-email">sarah.jenkins.executive@glasssupport.com</div>
+                                </div>
+                            </div>
+
+                            <div class="preset-card" onclick="selectOfficialPreset('marcus.vance.director@glasssupport.com', 'Marcus Vance')">
+                                <div class="preset-avatar">🏦</div>
+                                <div class="preset-meta">
+                                    <div class="preset-name">Marcus Vance</div>
+                                    <div class="preset-title">Director of Banking & Financial Integrity</div>
+                                    <div class="preset-email">marcus.vance.director@glasssupport.com</div>
+                                </div>
+                            </div>
+
+                            <div class="preset-card" onclick="selectOfficialPreset('elena.rostova.cso@glasssupport.com', 'Elena Rostova')">
+                                <div class="preset-avatar">🛡️</div>
+                                <div class="preset-meta">
+                                    <div class="preset-name">Elena Rostova</div>
+                                    <div class="preset-title">Head of Enterprise Security & Data Integrity</div>
+                                    <div class="preset-email">elena.rostova.cso@glasssupport.com</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Login Form -->
+                        <form id="official-login-form" onsubmit="handleOfficialLogin(event)" style="margin-top:1.5rem;">
+                            <div class="review-field-group">
+                                <label class="field-label">Executive Official Email / ID</label>
+                                <input type="email" id="official-login-email" value="sarah.jenkins.executive@glasssupport.com" required class="rev-input">
+                            </div>
+                            <div class="review-field-group">
+                                <label class="field-label">Executive Security Passcode / PIN</label>
+                                <input type="password" id="official-login-passcode" value="executive2026" placeholder="Enter executive passcode..." class="rev-input">
+                            </div>
+                            <button type="submit" class="btn-submit-review">
+                                🔓 Unlock Executive Mailbox & Active Requests
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- 2. Higher Official Mailbox & Resolution Desk (Shown when logged in) -->
+                    <div id="official-inbox-view" class="hidden">
+                        
+                        <!-- Top Dashboard Header with Logged-in Official Profile -->
+                        <div class="desk-header">
+                            <div class="official-profile-banner">
+                                <div class="official-banner-avatar" id="hdr-official-avatar">👑</div>
+                                <div>
+                                    <div style="display:flex;align-items:center;gap:8px;">
+                                        <h1 class="desk-main-title" id="hdr-official-name">Dr. Sarah Jenkins</h1>
+                                        <span class="badge-official-tag" id="hdr-official-tag">EXECUTIVE INBOX</span>
+                                    </div>
+                                    <div class="desk-subtitle-alert">
+                                        <span class="red-alert-dot"></span>
+                                        <span id="desk-urgent-text">Viewing requests assigned to <strong id="hdr-official-email" style="color:#4338CA;">sarah.jenkins.executive@glasssupport.com</strong></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="desk-controls">
+                                <div class="desk-user-search">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                                    <select id="admin-user-filter" onchange="filterOfficialRequestsByUser(this.value)">
+                                        <option value="">Inspect Customer ▾</option>
+                                    </select>
+                                </div>
+                                <button class="btn-filter-action" onclick="loadOfficialDashboard()">
+                                    🔄 Refresh
+                                </button>
+                                <button class="btn-cancel" onclick="logoutHigherOfficial()" style="padding:6px 12px;font-size:0.8rem;">
+                                    🚪 Logout
+                                </button>
+                            </div>
+                        </div>
+
+                    <!-- Split View Grid -->
+                    <div class="desk-grid">
+                        
+                        <!-- Left: Queue & KPI Column -->
+                        <div class="desk-left-col">
+                            
+                            <!-- 3 KPI Metric Cards -->
+                            <div class="kpi-cards-row">
+                                <div class="kpi-card">
+                                    <div class="kpi-val">2.4h</div>
+                                    <div class="kpi-label">AVG RESOLUTION</div>
+                                    <div class="kpi-bar-track"><div class="kpi-bar-fill"></div></div>
+                                </div>
+                                <div class="kpi-card">
+                                    <div class="kpi-val-row">
+                                        <span class="kpi-val" id="kpi-closed-today">18</span>
+                                        <span class="kpi-growth-pill">+12%</span>
+                                    </div>
+                                    <div class="kpi-subtext">COMPLETED <span class="muted">vs 16</span></div>
+                                </div>
+                                <div class="kpi-card">
+                                    <div class="kpi-val-row">
+                                        <span class="kpi-val red-text" id="kpi-urgent-count">2</span>
+                                    </div>
+                                    <div class="kpi-subtext"><span class="kpi-red-dot"></span> PENDING REQUESTS</div>
+                                    <div class="kpi-avatars">
+                                        <span class="avatar-mini">SJ</span>
+                                        <span class="avatar-mini">MV</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Queue Table Card -->
+                            <div class="queue-card">
+                                <div class="queue-card-header">
+                                    <div style="display:flex;gap:8px;">
+                                        <button class="subtab-btn active" id="subtab-official-pending" onclick="switchOfficialQueueTab('pending')">⏳ Pending Queue</button>
+                                        <button class="subtab-btn" id="subtab-official-completed" onclick="switchOfficialQueueTab('completed')">✅ Completed History</button>
+                                    </div>
+                                    <div class="queue-actions">
+                                        <button class="icon-tiny" onclick="loadOfficialDashboard()" title="Refresh Queue">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="queue-table">
+                                        <thead>
+                                            <tr>
+                                                <th>REQUEST ID</th>
+                                                <th>USER</th>
+                                                <th>QUERY SUMMARY</th>
+                                                <th>STATUS</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="official-queue-tbody">
+                                            <!-- Populated dynamically via JS -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Live User Transcript Inspector Drawer -->
+                            <div class="user-audit-card">
+                                <div class="audit-hdr">
+                                    <span>💬 Live Thread: <strong id="audit-user-name" style="color:#4338CA;">a.chen@tech.io</strong></span>
+                                    <button class="btn-text-action" onclick="reloadSelectedRequestThread()">🔄 Reload</button>
+                                </div>
+                                <div class="audit-messages-feed" id="audit-chat-feed">
+                                    <!-- Populated via JS -->
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- Right: Active Resolution & Live Chat Panel -->
+                        <div class="desk-right-col">
+                            <div class="resolution-panel-card">
+                                
+                                <div class="resolution-top-badge-row">
+                                    <span class="badge-active-resolution" id="panel-badge-status">PENDING REQUEST</span>
+                                    <span class="ticket-id-tag" id="panel-request-id">REQ-8923</span>
+                                    <div class="auth-key-pill" title="Security Authentication Key">
+                                        🔑 Key: <strong id="panel-auth-key">AUTH-8923</strong>
+                                    </div>
+                                </div>
+
+                                <h2 class="panel-issue-title" id="panel-issue-title">Admin Access & RBAC Issue</h2>
+
+                                <!-- User Customer Profile Card -->
+                                <div class="panel-customer-card">
+                                    <div class="customer-avatar-img" id="panel-customer-avatar">AC</div>
+                                    <div class="customer-info-meta">
+                                        <div class="customer-name" id="panel-customer-name">Alice Chen</div>
+                                        <div class="customer-role" id="panel-customer-role">VP Engineering @ Tech.io</div>
+                                    </div>
+                                    <div class="customer-tags-row">
+                                        <span class="plan-pill">Enterprise</span>
+                                        <span class="ltv-pill">LTV: $42k</span>
+                                    </div>
+                                </div>
+
+                                <!-- Detected Vectors -->
+                                <div class="vectors-section">
+                                    <div class="section-micro-label">DETECTED VECTORS</div>
+                                    <div class="vector-chips-row" id="panel-vector-chips">
+                                        <span class="vector-chip">🔗 Auth</span>
+                                        <span class="vector-chip">👥 RBAC Mismatch</span>
+                                    </div>
+                                </div>
+
+                                <!-- AI Drafted Response -->
+                                <div class="ai-draft-box">
+                                    <div class="ai-draft-top">
+                                        <div class="ai-draft-title">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4338CA" stroke-width="2"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+                                            <span>AI Suggested Solution</span>
+                                        </div>
+                                        <span class="confidence-pill" id="panel-draft-confidence">94% CONFIDENCE</span>
+                                    </div>
+                                    <div class="ai-draft-content" id="panel-ai-draft-body">
+                                        Hi Alice, I see you're encountering an admin access mismatch following the RBAC upgrade. I've re-synced your team roles in the identity cluster. Please refresh your session.
+                                    </div>
+                                </div>
+
+                                <!-- Official Live Chat Messenger Console -->
+                                <div class="official-live-chat-box">
+                                    <div class="input-hdr-row">
+                                        <span style="display:flex;align-items:center;gap:6px;color:#3730A3;font-weight:800;">
+                                            👑 Reply Live to Customer Chat:
+                                        </span>
+                                        <button class="btn-link-action" onclick="applyAIDraft()">Use AI Draft</button>
+                                    </div>
+                                    <textarea id="desk-response-input" placeholder="Type message to send directly to customer chat as Higher Official..."></textarea>
+                                    
+                                    <div class="official-actions-row">
+                                        <button type="button" class="btn-send-official-msg" onclick="sendOfficialLiveReply()">
+                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                                            Send to Customer
+                                        </button>
+                                        <button type="button" class="btn-resolve-ticket-secondary" onclick="markRequestCompleted()">
+                                            Mark Completed
+                                        </button>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                    </div>
+                </div> <!-- End #official-inbox-view -->
+
+                </div>
+            </section>
+
+            <!-- ============================================================= -->
+            <!-- VIEW 4: SERVICE REVIEWS & SATISFACTION HUB -->
+            <!-- ============================================================= -->
+            <section id="view-reviews" class="content-view">
+                <div class="reviews-container">
+                    
+                    <div class="reviews-header-row">
+                        <div>
+                            <h1 class="desk-main-title">Service Reviews & Satisfaction Hub</h1>
+                            <p class="page-subtitle" style="color:var(--text-muted);font-size:0.85rem;margin-top:2px;">
+                                Rate our assistance quality, report unresolved issues, and provide feedback to Higher Officials.
+                            </p>
+                        </div>
+                        <div class="csat-summary-badge">
+                            <span class="csat-stars">⭐⭐⭐⭐⭐</span>
+                            <span class="csat-score">4.9 / 5.0 CSAT</span>
+                        </div>
+                    </div>
+
+                    <div class="reviews-grid-layout">
+                        
+                        <!-- Left: Submit Review Form Card -->
+                        <div class="review-form-card">
+                            <h2 class="form-card-title">✍️ Submit Your Service Review</h2>
+                            <form id="review-submission-form" onsubmit="handleReviewSubmit(event)">
+                                
+                                <div class="review-field-row">
+                                    <div class="field-half">
+                                        <label class="field-label">Your Name</label>
+                                        <input type="text" id="rev-user-name" placeholder="Alice Chen" required class="rev-input">
+                                    </div>
+                                    <div class="field-half">
+                                        <label class="field-label">Your Email</label>
+                                        <input type="email" id="rev-user-email" value="a.chen@tech.io" required class="rev-input" readonly>
+                                    </div>
+                                </div>
+
+                                <!-- 1. Star Rating -->
+                                <div class="review-field-group">
+                                    <label class="field-label">1. How satisfied are you with our assistance?</label>
+                                    <div class="star-rating-selector" id="star-selector">
+                                        <span class="star-item active" onclick="setRating(1)">★</span>
+                                        <span class="star-item active" onclick="setRating(2)">★</span>
+                                        <span class="star-item active" onclick="setRating(3)">★</span>
+                                        <span class="star-item active" onclick="setRating(4)">★</span>
+                                        <span class="star-item active" onclick="setRating(5)">★</span>
+                                        <span class="rating-label-text" id="rating-desc-label">5 - Excellent & Fast Assistance</span>
+                                    </div>
+                                </div>
+
+                                <!-- 2. Issue Category Faced -->
+                                <div class="review-field-group">
+                                    <label class="field-label">2. What specific issue did you face?</label>
+                                    <select id="rev-issue-category" class="rev-input" required>
+                                        <option value="Website Down & 502 Routing">🌐 Website Down & 502 Routing</option>
+                                        <option value="Banking & Wire Transfer Settlement">🏦 Banking & Wire Transfer Settlement</option>
+                                        <option value="RBAC Permissions & Admin Access">🔑 RBAC Permissions & Admin Access</option>
+                                        <option value="Billing & Tax Exemption">💳 Billing & Tax Exemption</option>
+                                        <option value="Data Pipeline & Export Format">📊 Data Pipeline & Export Format</option>
+                                        <option value="Confidential Executive Matter">🔒 Confidential Executive Matter</option>
+                                        <option value="General Service Inquiry">⚙️ General Service Inquiry</option>
+                                    </select>
+                                </div>
+
+                                <!-- 3. Resolution Status -->
+                                <div class="review-field-group">
+                                    <label class="field-label">3. Was your issue resolved?</label>
+                                    <div class="resolution-toggle-cards">
+                                        <label class="res-toggle-card active" id="card-res-fully">
+                                            <input type="radio" name="is_resolved_opt" value="Fully Resolved" checked onchange="onResolutionToggle('Fully Resolved')">
+                                            <span class="res-title">✅ Fully Resolved</span>
+                                            <span class="res-sub">Issue fixed completely</span>
+                                        </label>
+                                        <label class="res-toggle-card" id="card-res-partially">
+                                            <input type="radio" name="is_resolved_opt" value="Partially Resolved" onchange="onResolutionToggle('Partially Resolved')">
+                                            <span class="res-title">⚠️ Partially</span>
+                                            <span class="res-sub">Minor follow-up needed</span>
+                                        </label>
+                                        <label class="res-toggle-card" id="card-res-not">
+                                            <input type="radio" name="is_resolved_opt" value="Not Resolved" onchange="onResolutionToggle('Not Resolved')">
+                                            <span class="res-title">❌ Not Resolved</span>
+                                            <span class="res-sub">Issue still persists</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Dynamic Unresolved Details -->
+                                <div id="unresolved-details-box" class="unresolved-alert-box hidden">
+                                    <div class="alert-hdr">
+                                        <span class="alert-icon">⚠️</span>
+                                        <span>Issue Not Resolved? Tell us what is still broken:</span>
+                                    </div>
+                                    <textarea id="rev-unresolved-text" placeholder="Please describe what error or problem is still occurring. Submitting this will automatically escalate an urgent request directly to our Higher Officials Desk..."></textarea>
+                                </div>
+
+                                <!-- 4. Service Feedback Comments -->
+                                <div class="review-field-group">
+                                    <label class="field-label">4. How was our overall service and assistance quality?</label>
+                                    <textarea id="rev-feedback-comments" class="rev-textarea" placeholder="Share your experience, staff responsiveness, and any suggestions for improvement..."></textarea>
+                                </div>
+
+                                <button type="submit" class="btn-submit-review">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    Submit Review & Feedback
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Right: Recent Customer Reviews Feed -->
+                        <div class="reviews-feed-column">
+                            <div class="feed-header-card">
+                                <h3 class="feed-title">🌟 Recent Customer Reviews</h3>
+                                <button class="btn-link-action" onclick="loadCustomerReviews()">🔄 Refresh</button>
+                            </div>
+                            <div class="reviews-feed-stream" id="reviews-feed-stream">
+                                <!-- Populated dynamically via JS -->
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+            </section>
+
+        </div>
+    </div>
+
+    <!-- ============================================================= -->
+    <!-- MODAL: Enter Authentication Key to Continue Chat -->
+    <!-- ============================================================= -->
+    <div id="auth-key-modal" class="modal-backdrop hidden">
+        <div class="otp-dialog">
+            <div class="otp-dialog-icon">🔑</div>
+            <h3 class="otp-title">Authentication Key Required</h3>
+            <p class="otp-desc">Please enter the security <b>Authentication Key</b> sent to your email to continue direct chat with the Higher Official for <strong id="modal-req-id-label">REQ-8923</strong>.</p>
+            <input type="text" id="modal-auth-key-input" placeholder="AUTH-8923" class="otp-input" style="font-size:1.2rem;letter-spacing:3px;">
+            <div class="otp-actions">
+                <button class="btn-cancel" onclick="closeAuthKeyModal()">Cancel</button>
+                <button class="btn-primary" onclick="submitAuthKeyVerification()">Unlock & Open Chat</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================= -->
+    <!-- MODAL: Customer Direct Live Chat Session Window -->
+    <!-- ============================================================= -->
+    <div id="live-session-modal" class="modal-backdrop hidden">
+        <div class="live-chat-modal-box">
+            <div class="live-chat-modal-header">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <span class="live-chat-crown">👑</span>
+                    <div>
+                        <div class="live-chat-modal-title" id="session-official-name">Dr. Sarah Jenkins</div>
+                        <div class="live-chat-modal-subtitle">Direct Executive Channel • <span id="session-req-badge">REQ-8923</span></div>
+                    </div>
+                </div>
+                <button class="btn-close-modal" onclick="closeLiveSessionModal()">✕</button>
+            </div>
+
+            <div class="live-chat-modal-body" id="session-messages-stream">
+                <!-- Live Messages Stream -->
+            </div>
+
+            <form class="live-chat-modal-footer" onsubmit="handleSessionCustomerSend(event)">
+                <input type="text" id="session-customer-input" placeholder="Type message directly to Higher Official..." autocomplete="off">
+                <button type="submit" class="btn-session-send">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Interactive OTP Verification Modal for Sensitive Banking -->
+    <div id="otp-modal" class="modal-backdrop hidden">
+        <div class="otp-dialog">
+            <div class="otp-dialog-icon">🛡️</div>
+            <h3 class="otp-title">Identity Verification</h3>
+            <p class="otp-desc">Please enter the 6-digit one-time code to securely access confidential records for <b id="otp-email-label">customer@example.com</b>.</p>
+            <input type="text" id="otp-input-field" placeholder="123456" maxlength="6" class="otp-input">
+            <div class="otp-actions">
+                <button class="btn-cancel" onclick="closeOTPModal()">Cancel</button>
+                <button class="btn-primary" onclick="submitOTPVerification()">Verify & Access</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast-popup hidden"></div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
