@@ -177,21 +177,24 @@ def chat_with_bot(user_query: str, user_email: str = "customer@example.com", cat
         conn.close()
 
         response_text = (
-            f"🔒 **Privacy & Confidentiality Protected**\n\n"
-            f"Due to enterprise privacy, data confidentiality, and integrity policies, automated disclosure is restricted.\n\n"
-            f"• **Designated Higher Official:** `{official['name']}` ({official['title']})\n"
+            f"🔒 **Forwarded to Higher Official (Privacy Protected)**\n\n"
+            f"Because this involves confidential enterprise data or executive policy, automated disclosure is restricted.\n\n"
+            f"📨 **Customer Information Dispatched to Official's Email:**\n"
+            f"• **Customer Name:** `{user_name}`\n"
+            f"• **Customer Email:** `{user_email_clean}`\n"
+            f"• **Inquiry Sent:** \"{user_query}\"\n\n"
+            f"👑 **Designated Higher Official:** `{official['name']}` ({official['title']})\n"
             f"• **Official Email:** `{official['email']}`\n"
             f"• **Direct Helpline:** `{official['phone']}`\n\n"
-            f"📧 **Your Request ID:** `{request_id}`\n"
-            f"🔑 **Your Authentication Key:** `{auth_key}` *(Sent to {user_email_clean})*\n\n"
-            f"Use your **Authentication Key** in **My Requests Dashboard** to continue the private chat directly with the Higher Official."
+            f"📧 **Request Tracking ID:** `{request_id}`\n\n"
+            f"*(When {official['name']} logs into their official account, they will review your inquiry and can start a **Group Chat Room** with an invite sent to your email, or initiate a direct **Call** with you.)*"
         )
 
-        log_message(request_id, user_email_clean, "assistant", "GlassSupport AI", response_text, badge="Privacy Protected", department=official['dept'])
+        log_message(request_id, user_email_clean, "assistant", "GlassSupport AI", response_text, badge="Dispatched to Official", department=official['dept'])
 
         return {
             "matched": False,
-            "badge": "Privacy Protected",
+            "badge": "Dispatched to Official",
             "badge_type": "confidential_officer",
             "request_id": request_id,
             "auth_key": auth_key,
@@ -215,7 +218,7 @@ def chat_with_bot(user_query: str, user_email: str = "customer@example.com", cat
             "department": match["department"]
         }
 
-    # 4. Fallback: Unresolvable query -> Connect to Higher Official with Auth Key
+    # 4. Fallback: Unresolvable query -> Forward details to Higher Official
     official = get_designated_higher_official(category or "General", user_query)
     request_id = f"REQ-{random.randint(1000, 9999)}"
     auth_key = f"AUTH-{random.randint(1000, 9999)}"
@@ -223,7 +226,7 @@ def chat_with_bot(user_query: str, user_email: str = "customer@example.com", cat
     conn = get_connection()
     cursor = conn.cursor()
     summary = f"Inquiry: {user_query[:55]}..."
-    ai_draft = f"Hi {user_name}, our AI chatbot could not resolve this automatically. I am taking over this request under Case {request_id}."
+    ai_draft = f"Hi {user_name}, our AI chatbot could not resolve this automatically. I have received your request ({request_id}) and am connecting with you now."
 
     cursor.execute("""
         INSERT INTO requests (
@@ -237,19 +240,22 @@ def chat_with_bot(user_query: str, user_email: str = "customer@example.com", cat
 
     escalation_text = (
         f"I couldn't find an exact verified match in our active knowledge base.\n\n"
-        f"⚡ **Connected to Higher Official:** `{official['name']}` ({official['title']})\n"
+        f"📨 **Customer Information Dispatched to Official's Email:**\n"
+        f"• **Customer Name:** `{user_name}`\n"
+        f"• **Customer Email:** `{user_email_clean}`\n"
+        f"• **Inquiry Sent:** \"{user_query}\"\n\n"
+        f"👑 **Designated Higher Official:** `{official['name']}` ({official['title']})\n"
         f"• **Official Email:** `{official['email']}`\n"
         f"• **Direct Helpline:** `{official['phone']}`\n\n"
-        f"📧 **Your Request ID:** `{request_id}`\n"
-        f"🔑 **Your Authentication Key:** `{auth_key}` *(Sent to {user_email_clean})*\n\n"
-        f"Use your **Authentication Key** in **My Requests Dashboard** to resume and chat directly with {official['name']}."
+        f"📧 **Request Tracking ID:** `{request_id}`\n\n"
+        f"*(When {official['name']} logs into their official account, they will review your inquiry and can start a **Group Chat Room** with an invite sent to your email, or initiate a direct **Call** with you.)*"
     )
 
-    log_message(request_id, user_email_clean, "assistant", "GlassSupport AI", escalation_text, badge="Connected to Higher Official", score=None, department=official['dept'])
+    log_message(request_id, user_email_clean, "assistant", "GlassSupport AI", escalation_text, badge="Dispatched to Official", score=None, department=official['dept'])
 
     return {
         "matched": False,
-        "badge": "Connected to Higher Official",
+        "badge": "Dispatched to Official",
         "badge_type": "confidential_officer",
         "request_id": request_id,
         "auth_key": auth_key,
@@ -391,6 +397,152 @@ def complete_customer_request(request_id: str, resolution_notes: str = "") -> Di
     conn.close()
 
     return {"success": True, "message": f"Request {request_id} marked as Completed."}
+
+# -----------------------------------------------------------------------------
+# Official-Initiated Chat Room & Live Call Systems
+# -----------------------------------------------------------------------------
+def official_create_chat_room(request_id: str, official_email: str, official_name: str = "Higher Official") -> Dict[str, Any]:
+    """Official creates a collaborative group chat room and sends an invite to the customer's email."""
+    init_db()
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM requests WHERE UPPER(request_id) = UPPER(?);", (request_id.strip(),))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return {"success": False, "message": f"Request {request_id} not found."}
+
+    req = dict(row)
+    room_id = req.get("chat_room_id") or f"ROOM-{random.randint(1000, 9999)}"
+    customer_email = req["user_email"]
+    customer_name = req["user_name"]
+
+    cursor.execute("""
+        UPDATE requests 
+        SET chat_room_id = ?, chat_status = 'Invite Sent to Customer'
+        WHERE UPPER(request_id) = UPPER(?);
+    """, (room_id, request_id.strip()))
+
+    # Insert initial room message
+    welcome_text = f"👑 Chat Room opened by {official_name}. An invitation has been dispatched to {customer_email}. You can converse directly in real-time."
+    cursor.execute("""
+        INSERT INTO room_messages (room_id, request_id, sender_role, sender_name, sender_email, content, created_at)
+        VALUES (?, ?, 'system', 'Support System', ?, ?, CURRENT_TIMESTAMP);
+    """, (room_id, request_id.strip(), official_email, welcome_text))
+
+    # Also record in chat_history for audit
+    cursor.execute("""
+        INSERT INTO chat_history (request_id, user_email, role, sender_name, content, badge, department, created_at)
+        VALUES (?, ?, 'official', ?, ?, '💬 Chat Room Created', 'Executive Desk', CURRENT_TIMESTAMP);
+    """, (request_id.strip(), customer_email, official_name, f"Created Live Chat Room ({room_id}) and emailed invitation to {customer_email}."))
+
+    conn.commit()
+    conn.close()
+
+    return {
+        "success": True,
+        "room_id": room_id,
+        "request_id": request_id,
+        "customer_email": customer_email,
+        "customer_name": customer_name,
+        "message": f"Live Chat Room ({room_id}) created! Email invitation dispatched to {customer_email}."
+    }
+
+def get_chat_room_messages(room_id: str) -> List[Dict[str, Any]]:
+    """Retrieves all messages for a specific chat room."""
+    init_db()
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT * FROM room_messages
+        WHERE UPPER(room_id) = UPPER(?)
+        ORDER BY id ASC;
+    """, (room_id.strip(),))
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+def send_chat_room_message(room_id: str, sender_role: str, sender_name: str, sender_email: str, content: str) -> Dict[str, Any]:
+    """Appends a new message to the active chat room."""
+    init_db()
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT request_id FROM requests WHERE UPPER(chat_room_id) = UPPER(?);", (room_id.strip(),))
+    row = cursor.fetchone()
+    req_id = row["request_id"] if row else ""
+
+    cursor.execute("""
+        INSERT INTO room_messages (room_id, request_id, sender_role, sender_name, sender_email, content, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP);
+    """, (room_id.strip(), req_id, sender_role, sender_name, sender_email.strip().lower(), content.strip()))
+
+    conn.commit()
+    conn.close()
+    return {"success": True, "message": "Message sent to room."}
+
+def official_start_call(request_id: str, official_email: str, official_name: str = "Higher Official") -> Dict[str, Any]:
+    """Official initiates a live call session with the customer."""
+    init_db()
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM requests WHERE UPPER(request_id) = UPPER(?);", (request_id.strip(),))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return {"success": False, "message": f"Request {request_id} not found."}
+
+    req = dict(row)
+    cursor.execute("""
+        UPDATE requests SET call_status = 'Calling' WHERE UPPER(request_id) = UPPER(?);
+    """, (request_id.strip(),))
+
+    call_log = f"📞 Outgoing Call initiated by {official_name} to {req['user_name']} ({req['user_phone']})."
+    cursor.execute("""
+        INSERT INTO chat_history (request_id, user_email, role, sender_name, content, badge, department, created_at)
+        VALUES (?, ?, 'official', ?, ?, '📞 Call Initiated', 'Executive Desk', CURRENT_TIMESTAMP);
+    """, (request_id.strip(), req["user_email"], official_name, call_log))
+
+    conn.commit()
+    conn.close()
+
+    return {
+        "success": True,
+        "request_id": request_id,
+        "customer_name": req["user_name"],
+        "customer_phone": req["user_phone"],
+        "customer_email": req["user_email"],
+        "official_name": official_name,
+        "message": f"Dialing {req['user_name']} at {req['user_phone']}..."
+    }
+
+def official_complete_call(request_id: str, duration_sec: int, notes: str = "", official_name: str = "Higher Official") -> Dict[str, Any]:
+    """Saves call completion data and notes."""
+    init_db()
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE requests 
+        SET call_status = 'Completed', call_duration = ?, call_notes = ?
+        WHERE UPPER(request_id) = UPPER(?);
+    """, (duration_sec, notes.strip(), request_id.strip()))
+
+    cursor.execute("SELECT user_email FROM requests WHERE UPPER(request_id) = UPPER(?);", (request_id.strip(),))
+    row = cursor.fetchone()
+    user_email = row["user_email"] if row else "customer@example.com"
+
+    summary_note = f"📞 Call Completed with customer (Duration: {duration_sec}s).\nNotes: {notes.strip() or 'Discussed and aligned on resolution.'}"
+    cursor.execute("""
+        INSERT INTO chat_history (request_id, user_email, role, sender_name, content, badge, department, created_at)
+        VALUES (?, ?, 'official', ?, ?, '📞 Call Summary', 'Executive Desk', CURRENT_TIMESTAMP);
+    """, (request_id.strip(), user_email, official_name, summary_note))
+
+    conn.commit()
+    conn.close()
+    return {"success": True, "message": "Call session saved and logged to request."}
 
 def authenticate_higher_official(email: str, passcode: str = "") -> Dict[str, Any]:
     """Authenticates higher official by email and passcode."""

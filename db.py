@@ -98,6 +98,34 @@ def init_db():
         );
     """)
 
+    # 5. Group Chat Room Messages Table (Official-Initiated Multi-Party Live Chat)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS room_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            room_id TEXT NOT NULL,
+            request_id TEXT NOT NULL,
+            sender_role TEXT NOT NULL, -- 'official', 'customer', 'system'
+            sender_name TEXT NOT NULL,
+            sender_email TEXT NOT NULL,
+            content TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+
+    # Column migration check for requests table
+    cursor.execute("PRAGMA table_info(requests);")
+    existing_cols = [row[1] for row in cursor.fetchall()]
+    if "chat_room_id" not in existing_cols:
+        cursor.execute("ALTER TABLE requests ADD COLUMN chat_room_id TEXT;")
+    if "chat_status" not in existing_cols:
+        cursor.execute("ALTER TABLE requests ADD COLUMN chat_status TEXT DEFAULT 'Awaiting Action';")
+    if "call_status" not in existing_cols:
+        cursor.execute("ALTER TABLE requests ADD COLUMN call_status TEXT DEFAULT 'Idle';")
+    if "call_duration" not in existing_cols:
+        cursor.execute("ALTER TABLE requests ADD COLUMN call_duration INTEGER DEFAULT 0;")
+    if "call_notes" not in existing_cols:
+        cursor.execute("ALTER TABLE requests ADD COLUMN call_notes TEXT;")
+
     # 5. FTS5 Virtual Table for Search
     cursor.execute("""
         CREATE VIRTUAL TABLE IF NOT EXISTS issues_fts USING fts5(

@@ -492,6 +492,29 @@
                                     </div>
                                 </div>
 
+                                <!-- Official Conversation Starter: Create Chat Room or Call -->
+                                <div class="official-conversation-initiator-card">
+                                    <div class="initiator-header">
+                                        <span style="font-weight:800;color:#1E293B;font-size:0.75rem;letter-spacing:0.5px;">🚀 INITIATE CUSTOMER CONVERSATION</span>
+                                        <span class="initiator-badge" id="panel-conv-status">AWAITING ACTION</span>
+                                    </div>
+                                    <p class="initiator-desc">
+                                        As the assigned Higher Official, you can initiate a live conversation with this customer. Create a collaborative chat room (an invitation is dispatched to their email) or start a direct voice call.
+                                    </p>
+                                    <div class="initiator-btn-row">
+                                        <button type="button" class="btn-initiate-chat" id="btn-initiate-room" onclick="initiateOfficialChatRoom()">
+                                            💬 Create Chat Room & Invite Customer
+                                        </button>
+                                        <button type="button" class="btn-initiate-call" onclick="initiateOfficialCall()">
+                                            📞 Start Call with Customer
+                                        </button>
+                                    </div>
+                                    <div id="room-active-banner" class="room-active-notice hidden">
+                                        <span>🎉 Active Room: <strong id="panel-active-room-id">ROOM-0000</strong> (Invite emailed to customer)</span>
+                                        <button type="button" class="btn-join-room-small" onclick="openActiveChatRoomModal()">Enter Live Room ➔</button>
+                                    </div>
+                                </div>
+
                                 <!-- Official Live Chat Messenger Console -->
                                 <div class="official-live-chat-box">
                                     <div class="input-hdr-row">
@@ -705,6 +728,97 @@
                 <button class="btn-cancel" onclick="closeOTPModal()">Cancel</button>
                 <button class="btn-primary" onclick="submitOTPVerification()">Verify & Access</button>
             </div>
+        </div>
+    </div>
+
+    <!-- ============================================================= -->
+    <!-- MODAL: Higher Official Direct Live Call Interface -->
+    <!-- ============================================================= -->
+    <div id="official-call-modal" class="modal-backdrop hidden">
+        <div class="call-dialog-box">
+            <div class="call-header">
+                <div class="call-pulse-avatar" id="call-pulse-avatar">
+                    <span id="call-avatar-icon">📞</span>
+                </div>
+                <div class="call-target-name" id="call-target-customer">Alice Chen</div>
+                <div class="call-target-phone" id="call-target-phone">+1 (415) 890-2134</div>
+                <div class="call-status-badge" id="call-status-pill">CALLING... (RINGING)</div>
+                <div class="call-timer-display" id="call-timer-text">00:00</div>
+            </div>
+
+            <!-- Waveform Animation -->
+            <div class="call-waveform-container" id="call-waveform">
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+            </div>
+
+            <!-- Call Resolution Notes -->
+            <div class="call-notes-wrapper">
+                <label class="field-label" style="color:#64748B;font-size:0.75rem;font-weight:700;">Official Call Notes & Action Items:</label>
+                <textarea id="call-notes-input" placeholder="Document alignment, customer confirmation, and next steps discussed during this call..."></textarea>
+            </div>
+
+            <!-- Call Controls -->
+            <div class="call-actions-row">
+                <button type="button" class="btn-call-ctrl" id="btn-call-mute" onclick="toggleCallMute()" title="Mute Microphone">
+                    🎤 Mute
+                </button>
+                <button type="button" class="btn-call-ctrl" id="btn-call-speaker" onclick="toggleCallSpeaker()" title="Toggle Speaker">
+                    🔊 Speaker
+                </button>
+                <button type="button" class="btn-call-end" onclick="finishOfficialCall()">
+                    ❌ End Call & Save Log
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================= -->
+    <!-- MODAL: Group Chat Room (Official & Customer Real-Time Room) -->
+    <!-- ============================================================= -->
+    <div id="group-chat-modal" class="modal-backdrop hidden">
+        <div class="group-chat-box">
+            <div class="group-chat-header">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <span class="group-chat-icon">👥</span>
+                    <div>
+                        <div class="group-chat-title" id="room-header-title">Live Chat Room</div>
+                        <div class="group-chat-subtitle">
+                            Room: <span id="room-header-id" style="font-weight:800;color:#3730A3;">ROOM-8923</span> • <span id="room-header-participants">Official & Customer</span>
+                        </div>
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span class="live-pill-green">● LIVE ROOM</span>
+                    <button class="btn-close-modal" onclick="closeGroupChatModal()">✕</button>
+                </div>
+            </div>
+
+            <!-- Participant Pill Strip -->
+            <div class="room-participants-bar">
+                <div class="participant-badge" id="room-badge-official">👑 Higher Official: Dr. Sarah Jenkins</div>
+                <div class="participant-badge" id="room-badge-customer">🧑 Customer: Alice Chen</div>
+                <div class="room-email-notice" id="room-email-status">✉️ Invite dispatched to customer email</div>
+            </div>
+
+            <!-- Messages Stream -->
+            <div class="group-chat-body" id="group-room-messages">
+                <!-- Messages will load here -->
+            </div>
+
+            <!-- Room Footer -->
+            <form class="group-chat-footer" onsubmit="handleSendRoomMessage(event)">
+                <input type="text" id="group-room-input" placeholder="Type a message in the collaborative room..." autocomplete="off">
+                <button type="submit" class="btn-session-send">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                </button>
+            </form>
         </div>
     </div>
 

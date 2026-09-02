@@ -321,6 +321,19 @@ function renderCustomerRequestsGrid(requests) {
         const statusClass = isPending ? "pending" : "completed";
         const statusLabel = isPending ? "⏳ Pending Official Chat" : "✅ Completed";
 
+        const roomAlert = req.chat_room_id ? `
+            <div style="background:#ECFDF5;border:1px solid #A7F3D0;border-radius:8px;padding:6px 10px;margin:8px 0;font-size:0.75rem;color:#065F46;display:flex;align-items:center;justify-content:space-between;">
+                <span>💬 <b>Chat Room Created:</b> ${req.chat_room_id}</span>
+                <button type="button" style="background:#059669;color:#fff;border:none;padding:4px 10px;border-radius:6px;font-weight:700;cursor:pointer;font-size:0.72rem;" onclick="openRoomModal('${req.chat_room_id}', '${req.assigned_official_name}', '${req.user_name || req.user_email}')">Join Room ➔</button>
+            </div>
+        ` : '';
+
+        const callNotice = (req.call_status && req.call_status !== 'Idle') ? `
+            <div style="font-size:0.72rem;color:#0284C7;font-weight:700;margin-bottom:6px;">
+                📞 Voice Call: ${req.call_status} ${req.call_duration ? '(' + req.call_duration + 's)' : ''}
+            </div>
+        ` : '';
+
         return `
             <div class="request-card-item">
                 <div>
@@ -339,6 +352,9 @@ function renderCustomerRequestsGrid(requests) {
                     <div class="req-auth-key-notice">
                         🔑 <span>Auth Key: <strong>${req.auth_key}</strong></span>
                     </div>
+
+                    ${roomAlert}
+                    ${callNotice}
                 </div>
 
                 <div>
@@ -646,6 +662,22 @@ function selectOfficialRequest(requestId) {
     document.getElementById("panel-ai-draft-body").innerText = req.ai_draft || "Hi, I have reviewed your request and am working on resolving it for you.";
     document.getElementById("desk-response-input").value = "";
 
+    // Toggle Room Status & Active Notice
+    const roomBanner = document.getElementById("room-active-banner");
+    const convStatus = document.getElementById("panel-conv-status");
+    if (req.chat_room_id) {
+        roomBanner.classList.remove("hidden");
+        document.getElementById("panel-active-room-id").innerText = req.chat_room_id;
+        convStatus.innerText = "ROOM ACTIVE";
+        convStatus.style.background = "#DCFCE7";
+        convStatus.style.color = "#15803D";
+    } else {
+        roomBanner.classList.add("hidden");
+        convStatus.innerText = "AWAITING ACTION";
+        convStatus.style.background = "#E0E7FF";
+        convStatus.style.color = "#3730A3";
+    }
+
     // Load conversation thread in drawer
     loadOfficialThreadMessages(req.request_id, req.user_email);
 }
@@ -752,6 +784,271 @@ async function markRequestCompleted() {
         }
     } catch (err) {
         showToast("Error completing request: " + err.message, "error");
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Official Conversation Initiators: Group Chat Room & Live Call
+// -----------------------------------------------------------------------------
+let activeChatRoomId = null;
+let activeChatRoomInterval = null;
+
+async function initiateOfficialChatRoom() {
+    if (!selectedOfficialRequestId) {
+        showToast("Please select a request from the queue first.", "error");
+        return;
+    }
+    const req = findRequestById(selectedOfficialRequestId);
+    if (!req) return;
+
+    try {
+        const res = await fetch("/api/official/create-chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                request_id: req.request_id,
+                official_email: currentLoggedInOfficial ? currentLoggedInOfficial.email : "sarah.jenkins.executive@glasssupport.com",
+                official_name: currentLoggedInOfficial ? currentLoggedInOfficial.name : "Dr. Sarah Jenkins"
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(`💬 Live Chat Room (${data.room_id}) created! Email invitation sent to ${data.customer_email}.`, "success");
+            loadOfficialDashboard();
+            openRoomModal(data.room_id, currentLoggedInOfficial ? currentLoggedInOfficial.name : "Higher Official", req.user_name || req.user_email);
+        }
+    } catch (err) {
+        showToast("Error creating chat room: " + err.message, "error");
+    }
+}
+
+function openActiveChatRoomModal() {
+    const req = findRequestById(selectedOfficialRequestId);
+    if (!req || !req.chat_room_id) {
+        showToast("No active chat room for this request yet.", "info");
+        return;
+    }
+    openRoomModal(req.chat_room_id, req.assigned_official_name, req.user_name || req.user_email);
+}
+
+function openRoomModal(roomId, officialName, customerName) {
+    activeChatRoomId = roomId;
+    document.getElementById("room-header-id").innerText = roomId;
+    document.getElementById("room-header-participants").innerText = `${officialName} & ${customerName}`;
+    document.getElementById("room-badge-official").innerText = `👑 Higher Official: ${officialName}`;
+    document.getElementById("room-badge-customer").innerText = `🧑 Customer: ${customerName}`;
+    document.getElementById("group-chat-modal").classList.remove("hidden");
+
+    reloadRoomMessages();
+    if (activeChatRoomInterval) clearInterval(activeChatRoomInterval);
+    activeChatRoomInterval = setInterval(reloadRoomMessages, 2500);
+}
+
+function closeGroupChatModal() {
+    document.getElementById("group-chat-modal").classList.add("hidden");
+    activeChatRoomId = null;
+    if (activeChatRoomInterval) {
+        clearInterval(activeChatRoomInterval);
+        activeChatRoomInterval = null;
+    }
+}
+
+async function reloadRoomMessages() {
+    if (!activeChatRoomId) return;
+    try {
+        const res = await fetch(`/api/chat-room/${encodeURIComponent(activeChatRoomId)}`);
+        const data = await res.json();
+        const messages = data.messages || [];
+
+        const stream = document.getElementById("group-room-messages");
+        if (messages.length === 0) {
+            stream.innerHTML = `<div style="text-align:center;padding:2rem;color:#94A3B8;font-size:0.85rem;">Room initialized. Send a message to start communicating.</div>`;
+            return;
+        }
+
+        stream.innerHTML = messages.map(msg => {
+            if (msg.sender_role === "system") {
+                return `
+                    <div style="background:#EEF2FF;border:1px solid #C7D2FE;border-radius:10px;padding:8px 12px;font-size:0.78rem;color:#3730A3;text-align:center;">
+                        ${formatText(msg.content)}
+                    </div>
+                `;
+            }
+            const isOfficial = msg.sender_role === "official";
+            if (isOfficial) {
+                return `
+                    <div style="display:flex;gap:10px;align-items:flex-start;">
+                        <div style="width:32px;height:32px;border-radius:50%;background:#FEF3C7;border:1px solid #FCD34D;display:flex;align-items:center;justify-content:center;font-size:0.9rem;flex-shrink:0;">👑</div>
+                        <div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;border-top-left-radius:2px;padding:9px 12px;max-width:80%;font-size:0.84rem;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="font-size:0.72rem;font-weight:800;color:#0F172A;margin-bottom:2px;">${msg.sender_name} <span style="font-size:0.65rem;color:#64748B;">(${msg.sender_email})</span></div>
+                            <div style="color:#1E293B;">${formatText(msg.content)}</div>
+                            <div style="font-size:0.65rem;color:#94A3B8;margin-top:4px;">${msg.created_at || ''}</div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                return `
+                    <div style="display:flex;justify-content:flex-end;gap:10px;align-items:flex-start;">
+                        <div style="background:#3730A3;color:#FFFFFF;border-radius:12px;border-top-right-radius:2px;padding:9px 12px;max-width:80%;font-size:0.84rem;">
+                            <div style="font-size:0.72rem;font-weight:700;color:rgba(255,255,255,0.85);margin-bottom:2px;">${msg.sender_name} <span style="font-size:0.65rem;color:rgba(255,255,255,0.65);">(${msg.sender_email})</span></div>
+                            <div>${formatText(msg.content)}</div>
+                            <div style="font-size:0.65rem;color:rgba(255,255,255,0.7);text-align:right;margin-top:4px;">${msg.created_at || ''}</div>
+                        </div>
+                        <div style="width:32px;height:32px;border-radius:50%;background:#E2E8F0;display:flex;align-items:center;justify-content:center;font-size:0.9rem;flex-shrink:0;">🧑</div>
+                    </div>
+                `;
+            }
+        }).join("");
+
+        stream.scrollTop = stream.scrollHeight;
+    } catch (err) {
+        console.error("Error reloading room messages:", err);
+    }
+}
+
+async function handleSendRoomMessage(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    const input = document.getElementById("group-room-input");
+    const text = input.value.trim();
+    if (!text || !activeChatRoomId) return;
+
+    input.value = "";
+
+    const isOfficialSender = !!currentLoggedInOfficial;
+    const senderRole = isOfficialSender ? "official" : "customer";
+    const senderName = isOfficialSender ? currentLoggedInOfficial.name : (activeUserEmail.split("@")[0].capitalize());
+    const senderEmail = isOfficialSender ? currentLoggedInOfficial.email : activeUserEmail;
+
+    try {
+        const res = await fetch("/api/chat-room/send", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                room_id: activeChatRoomId,
+                sender_role: senderRole,
+                sender_name: senderName,
+                sender_email: senderEmail,
+                content: text
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            await reloadRoomMessages();
+        }
+    } catch (err) {
+        showToast("Error sending room message: " + err.message, "error");
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Live Call System
+// -----------------------------------------------------------------------------
+let callTimerInterval = null;
+let callElapsedSeconds = 0;
+let isCallMuted = false;
+let isSpeakerActive = true;
+
+async function initiateOfficialCall() {
+    if (!selectedOfficialRequestId) {
+        showToast("Please select a request from the queue first.", "error");
+        return;
+    }
+    const req = findRequestById(selectedOfficialRequestId);
+    if (!req) return;
+
+    try {
+        const res = await fetch("/api/official/start-call", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                request_id: req.request_id,
+                official_email: currentLoggedInOfficial ? currentLoggedInOfficial.email : "sarah.jenkins.executive@glasssupport.com",
+                official_name: currentLoggedInOfficial ? currentLoggedInOfficial.name : "Dr. Sarah Jenkins"
+            })
+        });
+        const data = await res.json();
+
+        // Open Call Modal
+        document.getElementById("call-target-customer").innerText = req.user_name || req.user_email;
+        document.getElementById("call-target-phone").innerText = req.user_phone || "+1 (415) 890-2134";
+        document.getElementById("call-status-pill").innerText = "CALLING... (RINGING)";
+        document.getElementById("call-status-pill").style.color = "#38BDF8";
+        document.getElementById("call-status-pill").style.borderColor = "rgba(56, 189, 248, 0.4)";
+        document.getElementById("call-timer-text").innerText = "00:00";
+        document.getElementById("call-notes-input").value = "";
+        document.getElementById("official-call-modal").classList.remove("hidden");
+
+        callElapsedSeconds = 0;
+
+        setTimeout(() => {
+            const pill = document.getElementById("call-status-pill");
+            if (pill) {
+                pill.innerText = "CONNECTED (LIVE VOICE CHANNEL)";
+                pill.style.color = "#34D399";
+                pill.style.borderColor = "rgba(16, 185, 129, 0.4)";
+            }
+            startCallTimer();
+        }, 2200);
+
+    } catch (err) {
+        showToast("Error starting call: " + err.message, "error");
+    }
+}
+
+function startCallTimer() {
+    if (callTimerInterval) clearInterval(callTimerInterval);
+    callTimerInterval = setInterval(() => {
+        callElapsedSeconds++;
+        const mins = String(Math.floor(callElapsedSeconds / 60)).padStart(2, "0");
+        const secs = String(callElapsedSeconds % 60).padStart(2, "0");
+        document.getElementById("call-timer-text").innerText = `${mins}:${secs}`;
+    }, 1000);
+}
+
+function toggleCallMute() {
+    isCallMuted = !isCallMuted;
+    const btn = document.getElementById("btn-call-mute");
+    btn.classList.toggle("active", isCallMuted);
+    btn.innerText = isCallMuted ? "🔇 Muted" : "🎤 Mute";
+    showToast(isCallMuted ? "Microphone muted" : "Microphone active", "info");
+}
+
+function toggleCallSpeaker() {
+    isSpeakerActive = !isSpeakerActive;
+    const btn = document.getElementById("btn-call-speaker");
+    btn.classList.toggle("active", !isSpeakerActive);
+    btn.innerText = isSpeakerActive ? "🔊 Speaker" : "🔈 Earpiece";
+    showToast(isSpeakerActive ? "Speaker output active" : "Handset output active", "info");
+}
+
+async function finishOfficialCall() {
+    if (callTimerInterval) {
+        clearInterval(callTimerInterval);
+        callTimerInterval = null;
+    }
+
+    const notes = document.getElementById("call-notes-input").value.trim();
+    const duration = callElapsedSeconds;
+
+    try {
+        await fetch("/api/official/complete-call", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                request_id: selectedOfficialRequestId,
+                duration_sec: duration,
+                notes: notes,
+                official_name: currentLoggedInOfficial ? currentLoggedInOfficial.name : "Dr. Sarah Jenkins"
+            })
+        });
+
+        document.getElementById("official-call-modal").classList.add("hidden");
+        showToast(`✅ Call session completed (${duration}s) and saved to case log!`, "success");
+        loadOfficialDashboard();
+        loadCustomerRequests();
+    } catch (err) {
+        document.getElementById("official-call-modal").classList.add("hidden");
+        showToast("Call ended.", "info");
     }
 }
 

@@ -28,7 +28,12 @@ from backend import (
     get_all_official_requests,
     submit_customer_review,
     get_all_reviews,
-    get_dashboard_metrics
+    get_dashboard_metrics,
+    official_create_chat_room,
+    get_chat_room_messages,
+    send_chat_room_message,
+    official_start_call,
+    official_complete_call
 )
 
 init_db()
@@ -167,6 +172,70 @@ async def official_reply_endpoint(payload: OfficialReplyPayload):
 @app.post("/api/requests/complete")
 async def complete_request_endpoint(payload: CompleteRequestPayload):
     res = complete_customer_request(payload.request_id, payload.resolution_notes or "")
+    return res
+
+# -----------------------------------------------------------------------------
+# Official-Created Chat Rooms & Live Call Endpoints
+# -----------------------------------------------------------------------------
+class CreateChatRoomPayload(BaseModel):
+    request_id: str
+    official_email: str
+    official_name: Optional[str] = "Higher Official"
+
+class SendRoomMessagePayload(BaseModel):
+    room_id: str
+    sender_role: str
+    sender_name: str
+    sender_email: str
+    content: str
+
+class StartCallPayload(BaseModel):
+    request_id: str
+    official_email: str
+    official_name: Optional[str] = "Higher Official"
+
+class CompleteCallPayload(BaseModel):
+    request_id: str
+    duration_sec: int
+    notes: Optional[str] = ""
+    official_name: Optional[str] = "Higher Official"
+
+@app.post("/api/official/create-chat")
+async def create_chat_endpoint(payload: CreateChatRoomPayload):
+    res = official_create_chat_room(payload.request_id, payload.official_email, payload.official_name or "Higher Official")
+    return res
+
+@app.get("/api/chat-room/{room_id}")
+async def get_chat_room_endpoint(room_id: str):
+    messages = get_chat_room_messages(room_id)
+    return {"room_id": room_id, "messages": messages}
+
+@app.post("/api/chat-room/send")
+async def send_room_message_endpoint(payload: SendRoomMessagePayload):
+    if not payload.content.strip():
+        raise HTTPException(status_code=400, detail="Content cannot be empty.")
+    res = send_chat_room_message(
+        room_id=payload.room_id,
+        sender_role=payload.sender_role,
+        sender_name=payload.sender_name,
+        sender_email=payload.sender_email,
+        content=payload.content
+    )
+    return res
+
+@app.post("/api/official/start-call")
+async def start_call_endpoint(payload: StartCallPayload):
+    res = official_start_call(payload.request_id, payload.official_email, payload.official_name or "Higher Official")
+    return res
+
+@app.post("/api/official/complete-call")
+async def complete_call_endpoint(payload: CompleteCallPayload):
+    res = official_complete_call(
+        request_id=payload.request_id,
+        duration_sec=payload.duration_sec,
+        notes=payload.notes or "",
+        official_name=payload.official_name or "Higher Official"
+    )
     return res
 
 # Reviews & Stats
