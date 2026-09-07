@@ -618,13 +618,7 @@ async function handleSessionCustomerSend(e) {
 // -----------------------------------------------------------------------------
 // VIEW 3: Higher Officials Portal & Login Authentication
 // -----------------------------------------------------------------------------
-let currentLoggedInOfficial = {
-    name: "Dr. Sarah Jenkins",
-    title: "Chief Governance & Executive Officer",
-    email: "sarah.jenkins.executive@glasssupport.com",
-    phone: "+1 (800) 555-0199 (Ext. 401)",
-    dept: "Executive Governance & Privacy"
-};
+let currentLoggedInOfficial = null;
 
 function selectOfficialPreset(email, name) {
     document.querySelectorAll(".preset-card").forEach(c => c.classList.remove("active"));
@@ -672,15 +666,30 @@ function updateOfficialUIState() {
     const inboxView = document.getElementById("official-inbox-view");
 
     if (!currentLoggedInOfficial) {
-        loginCard.classList.remove("hidden");
-        inboxView.classList.add("hidden");
+        if (loginCard) {
+            loginCard.classList.remove("hidden");
+            loginCard.style.display = "block";
+        }
+        if (inboxView) {
+            inboxView.classList.add("hidden");
+            inboxView.style.display = "none";
+        }
     } else {
-        loginCard.classList.add("hidden");
-        inboxView.classList.remove("hidden");
+        if (loginCard) {
+            loginCard.classList.add("hidden");
+            loginCard.style.display = "none";
+        }
+        if (inboxView) {
+            inboxView.classList.remove("hidden");
+            inboxView.style.display = "block";
+        }
 
-        document.getElementById("hdr-official-name").innerText = currentLoggedInOfficial.name;
-        document.getElementById("hdr-official-email").innerText = currentLoggedInOfficial.email;
-        document.getElementById("hdr-official-tag").innerText = `${currentLoggedInOfficial.title.toUpperCase()}`;
+        const nameEl = document.getElementById("hdr-official-name");
+        if (nameEl) nameEl.innerText = currentLoggedInOfficial.name;
+        const emailEl = document.getElementById("hdr-official-email");
+        if (emailEl) emailEl.innerText = currentLoggedInOfficial.email;
+        const tagEl = document.getElementById("hdr-official-tag");
+        if (tagEl) tagEl.innerText = `${currentLoggedInOfficial.title.toUpperCase()}`;
     }
 }
 
