@@ -387,16 +387,13 @@ async function handleChatSubmit(e) {
                         <a href="tel:${off.phone}" style="color:#4338CA;text-decoration:none;font-weight:700;background:#F8FAFC;padding:3px 8px;border-radius:6px;">📞 ${off.phone || ''}</a>
                     </div>
                     
-                    <div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:0.78rem;color:#92400E;">
-                        🔑 <b>Authentication Key:</b> <code style="font-weight:800;font-size:0.9rem;color:#78350F;">${data.auth_key}</code> <i>(Sent to ${activeUserEmail})</i>
+                    <div style="background:#ECFDF5;border:1px solid #A7F3D0;border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:0.78rem;color:#065F46;">
+                        ✉️ <b>Inquiry Dispatched:</b> Your request has been routed to <b>${off.name}</b>. When the Higher Official creates the live chat or updates your case, you will receive the invite link directly via email.
                     </div>
 
                     <div style="display:flex;gap:8px;">
-                        <button type="button" class="btn-primary" style="padding:6px 12px;font-size:0.8rem;" onclick="promptAuthKeyToChat('${data.request_id}', '${data.auth_key}', '${off.name}')">
-                            🔑 Continue Live Chat with Higher Official
-                        </button>
-                        <button type="button" class="btn-cancel" style="padding:6px 12px;font-size:0.8rem;" onclick="switchView('requests')">
-                            📑 View in My Requests
+                        <button type="button" class="btn-primary" style="padding:6px 14px;font-size:0.8rem;" onclick="switchView('requests')">
+                            📑 Track Status in My Requests
                         </button>
                     </div>
                 </div>
@@ -494,15 +491,11 @@ async function submitCustomerEscalation(formId, queryText) {
                             Your inquiry, contact phone (<b>${data.customer.phone}</b>), and email have been dispatched to <b>${data.assigned_official.name}</b> (${data.assigned_official.title}). The official will contact you via email and can launch a live chat session.
                         </div>
                         <div style="background:#FFFFFF;border:1px solid #A7F3D0;border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:0.8rem;color:#065F46;">
-                            🔑 <b>Your Authentication Key:</b> <code style="font-weight:800;color:#047857;font-size:0.9rem;">${data.auth_key}</code> 
-                            &bull; <b>Ticket ID:</b> <code>${data.request_id}</code>
+                            ✉️ <b>Confirmation Emailed:</b> Ticket <code>${data.request_id}</code> created. <b>${data.assigned_official.name}</b> will contact you via email with live chat access and updates.
                         </div>
                         <div style="display:flex;gap:8px;">
-                            <button type="button" class="btn-primary" style="padding:6px 12px;font-size:0.8rem;" onclick="promptAuthKeyToChat('${data.request_id}', '${data.auth_key}', '${data.assigned_official.name}')">
-                                🔑 Continue Live Chat
-                            </button>
-                            <button type="button" class="btn-cancel" style="padding:6px 12px;font-size:0.8rem;" onclick="switchView('requests')">
-                                📑 View in My Requests
+                            <button type="button" class="btn-primary" style="padding:6px 14px;font-size:0.8rem;" onclick="switchView('requests')">
+                                📑 Track Status in My Requests
                             </button>
                         </div>
                     </div>
@@ -594,20 +587,24 @@ function renderCustomerRequestsGrid(requests) {
     grid.innerHTML = requests.map(req => {
         const isPending = req.status === "Pending";
         const statusClass = isPending ? "pending" : "completed";
-        const statusLabel = isPending ? "⏳ Pending Official Chat" : "✅ Completed";
+        const statusLabel = isPending ? "⏳ Pending Review" : "✅ Solved";
 
         const roomAlert = req.chat_room_id ? `
-            <div style="background:#ECFDF5;border:1px solid #A7F3D0;border-radius:8px;padding:6px 10px;margin:8px 0;font-size:0.75rem;color:#065F46;display:flex;align-items:center;justify-content:space-between;">
-                <span>💬 <b>Chat Room Created:</b> ${req.chat_room_id}</span>
-                <button type="button" style="background:#059669;color:#fff;border:none;padding:4px 10px;border-radius:6px;font-weight:700;cursor:pointer;font-size:0.72rem;" onclick="openRoomModal('${req.chat_room_id}', '${req.assigned_official_name}', '${req.user_name || req.user_email}')">Join Room ➔</button>
+            <div style="background:#ECFDF5;border:1px solid #A7F3D0;border-radius:8px;padding:8px 12px;margin:10px 0 6px 0;font-size:0.78rem;color:#065F46;display:flex;align-items:center;justify-content:space-between;">
+                <span>💬 <b>Live Chat Room Emailed:</b> ${req.chat_room_id}</span>
+                <button type="button" style="background:#059669;color:#fff;border:none;padding:5px 12px;border-radius:6px;font-weight:700;cursor:pointer;font-size:0.75rem;" onclick="openRoomModal('${req.chat_room_id}', '${req.assigned_official_name}', '${req.user_name || req.user_email}')">Join Live Chat ➔</button>
             </div>
         ` : '';
 
-        const callNotice = (req.call_status && req.call_status !== 'Idle') ? `
-            <div style="font-size:0.72rem;color:#0284C7;font-weight:700;margin-bottom:6px;">
-                📞 Voice Call: ${req.call_status} ${req.call_duration ? '(' + req.call_duration + 's)' : ''}
+        const statusNote = isPending ? `
+            <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;padding:9px 12px;margin-top:10px;font-size:0.78rem;color:#166534;line-height:1.4;">
+                ✉️ <b>Waiting for Higher Official:</b> When <strong>${req.assigned_official_name}</strong> begins the live chat or updates your case, you will receive an invitation link directly at <b>${req.user_email}</b>.
             </div>
-        ` : '';
+        ` : `
+            <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:9px 12px;margin-top:10px;font-size:0.78rem;color:#334155;line-height:1.4;">
+                ✅ <b>Status: Solved.</b> ${req.resolution_notes || 'Resolved by ' + req.assigned_official_name + '. Confirmation emailed to customer.'}
+            </div>
+        `;
 
         return `
             <div class="request-card-item">
@@ -624,18 +621,8 @@ function renderCustomerRequestsGrid(requests) {
                         <span style="color:#64748B;font-size:0.7rem;">(${req.assigned_official_title})</span>
                     </div>
 
-                    <div class="req-auth-key-notice">
-                        🔑 <span>Auth Key: <strong>${req.auth_key}</strong></span>
-                    </div>
-
                     ${roomAlert}
-                    ${callNotice}
-                </div>
-
-                <div>
-                    <button class="btn-resume-chat" onclick="promptAuthKeyToChat('${req.request_id}', '${req.auth_key}', '${req.assigned_official_name}')">
-                        ${isPending ? '🔑 Enter Key & Continue Chat' : '💬 View Chat History'}
-                    </button>
+                    ${statusNote}
                 </div>
             </div>
         `;
