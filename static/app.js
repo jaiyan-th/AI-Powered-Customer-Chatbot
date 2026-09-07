@@ -2,7 +2,7 @@
 // Complete Controller for CSP Chatbot Request & Authentication Key Architecture
 
 let currentCustomer = JSON.parse(localStorage.getItem('csp_customer') || 'null');
-let activeUserEmail = currentCustomer ? currentCustomer.email : "a.chen@tech.io";
+let activeUserEmail = currentCustomer ? currentCustomer.email : "";
 let currentRequestTab = "pending";
 let officialQueueTab = "pending";
 let allOfficialRequests = { pending: [], completed: [] };
@@ -531,15 +531,38 @@ function sendFeedback(worked) {
 // VIEW 2: Customer Requests Dashboard (Pending vs Completed)
 // -----------------------------------------------------------------------------
 async function loadCustomerRequests() {
+    const badgePending = document.getElementById("badge-pending-count");
+    const badgeCompleted = document.getElementById("badge-completed-count");
+    const grid = document.getElementById("customer-requests-grid");
+
+    if (!currentCustomer || !currentCustomer.email) {
+        if (badgePending) badgePending.innerText = "0";
+        if (badgeCompleted) badgeCompleted.innerText = "0";
+        if (grid) {
+            grid.innerHTML = `
+                <div style="grid-column:1/-1;text-align:center;padding:3.5rem 1rem;background:#FFFFFF;border:1px solid #E2E8F0;border-radius:16px;color:#64748B;">
+                    <div style="font-size:2.8rem;margin-bottom:12px;">🔒</div>
+                    <div style="font-weight:800;font-size:1.15rem;color:#0F172A;margin-bottom:6px;">Please Sign In to View Your Requests</div>
+                    <div style="font-size:0.85rem;color:#64748B;max-width:420px;margin:0 auto 1.5rem;line-height:1.5;">Each customer sees only their own requests and live session links. Sign in with your email to view your personal support requests.</div>
+                    <button type="button" class="btn-primary" style="padding:10px 22px;font-size:0.9rem;border-radius:8px;font-weight:700;" onclick="promptCustomerSignIn()">
+                        🧑 Customer Sign In
+                    </button>
+                </div>
+            `;
+        }
+        return;
+    }
+
     try {
-        const res = await fetch(`/api/customer/requests/${encodeURIComponent(activeUserEmail)}`);
+        const userEmail = currentCustomer.email.trim().toLowerCase();
+        const res = await fetch(`/api/customer/requests/${encodeURIComponent(userEmail)}`);
         const data = await res.json();
 
         const pendingList = data.pending || [];
         const completedList = data.completed || [];
 
-        document.getElementById("badge-pending-count").innerText = pendingList.length;
-        document.getElementById("badge-completed-count").innerText = completedList.length;
+        if (badgePending) badgePending.innerText = pendingList.length;
+        if (badgeCompleted) badgeCompleted.innerText = completedList.length;
 
         renderCustomerRequestsGrid(currentRequestTab === "pending" ? pendingList : completedList);
 
