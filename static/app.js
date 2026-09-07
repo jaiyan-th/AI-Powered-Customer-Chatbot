@@ -113,6 +113,12 @@ function switchView(viewName) {
     document.querySelectorAll(".nav-btn").forEach(el => el.classList.remove("active"));
     document.querySelectorAll(".content-view").forEach(el => el.classList.remove("active"));
 
+    // Hide customer identity dropdown when in Higher Official portal (customers have no work here)
+    const customerDropdown = document.getElementById("topbar-customer-dropdown");
+    if (customerDropdown) {
+        customerDropdown.style.display = (viewName === "dashboard") ? "none" : "flex";
+    }
+
     if (viewName === "chat") {
         document.getElementById("tab-chat").classList.add("active");
         document.getElementById("view-chat").classList.add("active");
@@ -619,16 +625,6 @@ async function handleSessionCustomerSend(e) {
 // VIEW 3: Higher Officials Portal & Login Authentication
 // -----------------------------------------------------------------------------
 let currentLoggedInOfficial = null;
-
-function selectOfficialPreset(email, name) {
-    document.querySelectorAll(".preset-card").forEach(c => c.classList.remove("active"));
-    const cards = document.querySelectorAll(".preset-card");
-    cards.forEach(c => {
-        if (c.innerHTML.includes(email)) c.classList.add("active");
-    });
-    const emailInput = document.getElementById("official-login-email");
-    if (emailInput) emailInput.value = email;
-}
 
 async function handleOfficialLogin(e) {
     if (e && e.preventDefault) e.preventDefault();

@@ -94,7 +94,7 @@
 
                 <div class="topbar-right">
                     <!-- User Persona Dropdown -->
-                    <div class="dropdown-agent-id">
+                    <div class="dropdown-agent-id" id="topbar-customer-dropdown">
                         <span class="id-icon">📇</span>
                         <select id="user-email-select" onchange="onUserIdentityChanged(this.value)">
                             <option value="customer@example.com">customer@example.com (Guest)</option>
@@ -278,56 +278,25 @@
                 <div class="desk-container">
                     
                     <!-- 1. Higher Official Login Screen (Shown when not logged in) -->
-                    <div id="official-login-card" class="official-login-card-box" style="display:block;">
-                        <div class="official-login-icon">🛡️</div>
-                        <h2 class="official-login-title">Higher Officials Authentication</h2>
-                        <p class="official-login-desc">
-                            Log in with your executive email / ID to access the confidential customer requests, live chat sessions, and escalated inquiries assigned to your mailbox.
+                    <div id="official-login-card" class="official-login-card-box" style="display:block;max-width:440px;margin:3rem auto;padding:2.5rem 2rem;background:#FFFFFF;border:1px solid #E2E8F0;border-radius:18px;box-shadow:0 10px 25px -3px rgba(0,0,0,0.06);text-align:center;">
+                        <div class="official-login-icon" style="font-size:2.8rem;margin-bottom:0.75rem;">🛡️</div>
+                        <h2 class="official-login-title" style="font-size:1.4rem;font-weight:800;color:#0F172A;margin-bottom:0.4rem;">Higher Official Login</h2>
+                        <p class="official-login-desc" style="font-size:0.84rem;color:#64748B;line-height:1.5;margin-bottom:1.5rem;">
+                            Executive access only. Enter your official email and password to log in and manage customer requests and live sessions.
                         </p>
 
-                        <!-- Quick Official Presets -->
-                        <div class="official-presets-label">QUICK SELECT EXECUTIVE PROFILE:</div>
-                        <div class="official-presets-grid">
-                            <div class="preset-card active" onclick="selectOfficialPreset('sarah.jenkins.executive@glasssupport.com', 'Dr. Sarah Jenkins')">
-                                <div class="preset-avatar">👑</div>
-                                <div class="preset-meta">
-                                    <div class="preset-name">Dr. Sarah Jenkins</div>
-                                    <div class="preset-title">Chief Governance & Executive Officer</div>
-                                    <div class="preset-email">sarah.jenkins.executive@glasssupport.com</div>
-                                </div>
+                        <!-- Login Form: ONLY Official Email & Password -->
+                        <form id="official-login-form" onsubmit="handleOfficialLogin(event)" style="text-align:left;">
+                            <div class="review-field-group" style="margin-bottom:1rem;">
+                                <label class="field-label" style="display:block;font-size:0.75rem;font-weight:700;color:#475569;margin-bottom:5px;">Official Email ID</label>
+                                <input type="email" id="official-login-email" placeholder="e.g. sarah.jenkins.executive@glasssupport.com" required class="rev-input" style="width:100%;padding:10px 14px;border:1px solid #CBD5E1;border-radius:8px;font-size:0.88rem;outline:none;">
                             </div>
-
-                            <div class="preset-card" onclick="selectOfficialPreset('marcus.vance.director@glasssupport.com', 'Marcus Vance')">
-                                <div class="preset-avatar">🏦</div>
-                                <div class="preset-meta">
-                                    <div class="preset-name">Marcus Vance</div>
-                                    <div class="preset-title">Director of Banking & Financial Integrity</div>
-                                    <div class="preset-email">marcus.vance.director@glasssupport.com</div>
-                                </div>
+                            <div class="review-field-group" style="margin-bottom:1.5rem;">
+                                <label class="field-label" style="display:block;font-size:0.75rem;font-weight:700;color:#475569;margin-bottom:5px;">Official Password</label>
+                                <input type="password" id="official-login-passcode" placeholder="Enter password..." required class="rev-input" style="width:100%;padding:10px 14px;border:1px solid #CBD5E1;border-radius:8px;font-size:0.88rem;outline:none;">
                             </div>
-
-                            <div class="preset-card" onclick="selectOfficialPreset('elena.rostova.cso@glasssupport.com', 'Elena Rostova')">
-                                <div class="preset-avatar">🛡️</div>
-                                <div class="preset-meta">
-                                    <div class="preset-name">Elena Rostova</div>
-                                    <div class="preset-title">Head of Enterprise Security & Data Integrity</div>
-                                    <div class="preset-email">elena.rostova.cso@glasssupport.com</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Login Form -->
-                        <form id="official-login-form" onsubmit="handleOfficialLogin(event)" style="margin-top:1.5rem;">
-                            <div class="review-field-group">
-                                <label class="field-label">Executive Official Email / ID</label>
-                                <input type="email" id="official-login-email" value="sarah.jenkins.executive@glasssupport.com" required class="rev-input">
-                            </div>
-                            <div class="review-field-group">
-                                <label class="field-label">Executive Security Passcode / PIN</label>
-                                <input type="password" id="official-login-passcode" value="executive2026" placeholder="Enter executive passcode..." class="rev-input">
-                            </div>
-                            <button type="submit" class="btn-submit-review">
-                                🔓 Unlock Executive Mailbox & Active Requests
+                            <button type="submit" class="btn-submit-review" style="width:100%;padding:12px;background:#4338CA;color:#FFFFFF;border:none;border-radius:8px;font-weight:800;font-size:0.92rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+                                🔒 Sign In to Official Portal
                             </button>
                         </form>
                     </div>

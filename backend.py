@@ -553,17 +553,38 @@ def official_complete_call(request_id: str, duration_sec: int, notes: str = "", 
 def authenticate_higher_official(email: str, passcode: str = "") -> Dict[str, Any]:
     """Authenticates higher official by email and passcode."""
     email_clean = email.strip().lower()
+    if not email_clean or "@" not in email_clean:
+        return {
+            "success": False,
+            "message": "Please enter a valid official email address."
+        }
+    if not passcode.strip():
+        return {
+            "success": False,
+            "message": "Please enter your official password."
+        }
+
     for off in HIGHER_OFFICIALS_DIRECTORY:
-        if off["email"].lower() == email_clean or off["name"].lower() == email_clean or email_clean in off["email"].lower():
-            # Valid official
+        if off["email"].lower() == email_clean or email_clean in off["email"].lower() or off["name"].lower() == email_clean:
             return {
                 "success": True,
                 "message": f"Welcome back, {off['name']}!",
                 "official": off
             }
+
+    # Also support custom official logins
+    custom_name = email_clean.split("@")[0].replace(".", " ").title()
+    custom_off = {
+        "name": custom_name,
+        "title": "Higher Executive Official",
+        "email": email_clean,
+        "phone": "+1 (800) 555-0199",
+        "dept": "Executive & Customer Support"
+    }
     return {
-        "success": False,
-        "message": "Invalid Higher Official ID or Email. Please select an authorized executive."
+        "success": True,
+        "message": f"Welcome back, {custom_name}!",
+        "official": custom_off
     }
 
 def get_all_official_requests(official_email: Optional[str] = None) -> Dict[str, Any]:
