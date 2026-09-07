@@ -169,14 +169,8 @@ def init_db():
     if cursor.fetchone()[0] == 0:
         seed_database(conn)
 
-    cursor.execute("SELECT COUNT(*) FROM requests;")
-    if cursor.fetchone()[0] == 0:
-        seed_sample_requests(conn)
-
-    cursor.execute("SELECT COUNT(*) FROM chat_history;")
-    if cursor.fetchone()[0] == 0:
-        seed_sample_chat_history(conn)
-
+    # Do not auto-seed sample requests so user starts with a clean slate
+    # Requests will be created dynamically based on user inquiries
     cursor.execute("SELECT COUNT(*) FROM reviews;")
     if cursor.fetchone()[0] == 0:
         seed_sample_reviews(conn)
