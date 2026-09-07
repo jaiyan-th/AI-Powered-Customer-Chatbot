@@ -1,5 +1,5 @@
 /* static/style.css */
-/* GlassSupport Design System - Request & Authentication Key Architecture */
+/* CSP Chatbot Design System - Customer Support Platform */
 
 :root {
     --primary: #4338CA;
@@ -2148,5 +2148,65 @@ body {
     border-radius: 9999px;
     font-size: 0.85rem;
     outline: none;
+}
+
+/* Customer Auth & Profile Pill Styles */
+.customer-profile-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #EEF2FF;
+    border: 1px solid #C7D2FE;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-family: inherit;
+}
+
+.customer-profile-pill .cust-name {
+    color: #4338CA;
+    font-weight: 700;
+}
+
+.customer-profile-pill .cust-email {
+    color: #6B7280;
+    font-size: 0.75rem;
+}
+
+.btn-signout-mini {
+    background: #FFFFFF;
+    border: 1px solid #CBD5E1;
+    color: #475569;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-signout-mini:hover {
+    background: #FEE2E2;
+    color: #DC2626;
+    border-color: #FCA5A5;
+}
+
+.btn-signin-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #4338CA;
+    color: #FFFFFF;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.btn-signin-pill:hover {
+    background: #3730A3;
 }
 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CSP (Customer Support Provider) — Customer Support Platform</title>
+    <title>CSP Chatbot — Customer Support Platform</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -23,7 +23,7 @@
                         <path d="M2 12L12 17L22 12" stroke="#6366F1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                 </div>
-                <span class="brand-title">GlassSupport</span>
+                <span class="brand-title">CSP Chatbot</span>
             </div>
 
             <nav class="sidebar-nav">
@@ -93,15 +93,16 @@
                 </div>
 
                 <div class="topbar-right">
-                    <!-- User Persona Dropdown -->
-                    <div class="dropdown-agent-id" id="topbar-customer-dropdown">
-                        <span class="id-icon">📇</span>
-                        <select id="user-email-select" onchange="onUserIdentityChanged(this.value)">
-                            <option value="customer@example.com">customer@example.com (Guest)</option>
-                            <option value="a.chen@tech.io" selected>Alice Chen (a.chen@tech.io)</option>
-                            <option value="j.smith@corp.com">J. Smith (j.smith@corp.com)</option>
-                            <option value="r.woods@design.co">R. Woods (r.woods@design.co)</option>
-                        </select>
+                    <!-- Customer Identity & Sign-In Status Pill -->
+                    <div id="topbar-customer-dropdown" style="display:flex;align-items:center;gap:8px;">
+                        <div id="customer-signed-in-pill" class="customer-profile-pill hidden" style="display:none;">
+                            <span>🧑 <strong id="topbar-cust-name" class="cust-name">Customer</strong></span>
+                            <span class="cust-email">(<span id="topbar-cust-email">customer@example.com</span>)</span>
+                            <button type="button" class="btn-signout-mini" onclick="handleCustomerSignOut()" title="Sign Out">Sign Out</button>
+                        </div>
+                        <button type="button" id="customer-signin-btn" class="btn-signin-pill" onclick="promptCustomerSignIn()">
+                            🧑 Customer Sign In
+                        </button>
                     </div>
 
                     <!-- Voice TTS Toggle -->
@@ -133,104 +134,119 @@
             <section id="view-chat" class="content-view active">
                 <div class="chat-container">
                     
-                    <div class="date-chip">
-                        <span>TODAY, 10:42 AM</span>
+                    <!-- Customer Sign-In Screen (Required before chatting) -->
+                    <div id="customer-signin-screen" class="official-login-card-box" style="display:block;max-width:440px;margin:2.5rem auto;padding:2.5rem 2rem;background:#FFFFFF;border:1px solid #E2E8F0;border-radius:18px;box-shadow:0 10px 25px -3px rgba(0,0,0,0.06);text-align:center;">
+                        <div class="official-login-icon" style="font-size:2.8rem;margin-bottom:0.75rem;">🧑‍💻</div>
+                        <h2 class="official-login-title" style="font-size:1.4rem;font-weight:800;color:#0F172A;margin-bottom:0.4rem;">Customer Sign In</h2>
+                        <p class="official-login-desc" style="font-size:0.84rem;color:#64748B;line-height:1.5;margin-bottom:1.5rem;">
+                            Sign in to chat with <strong>CSP Chatbot</strong>, receive instant solutions, and automatically route unresolvable issues to Higher Officials.
+                        </p>
+
+                        <form id="customer-signin-form" onsubmit="handleCustomerSignIn(event)" style="text-align:left;">
+                            <div class="review-field-group" style="margin-bottom:1rem;">
+                                <label class="field-label" style="display:block;font-size:0.75rem;font-weight:700;color:#475569;margin-bottom:5px;">Your Full Name *</label>
+                                <input type="text" id="cust-signin-name" placeholder="e.g. Alice Chen" required class="rev-input" style="width:100%;padding:10px 14px;border:1px solid #CBD5E1;border-radius:8px;font-size:0.88rem;outline:none;">
+                            </div>
+                            <div class="review-field-group" style="margin-bottom:1rem;">
+                                <label class="field-label" style="display:block;font-size:0.75rem;font-weight:700;color:#475569;margin-bottom:5px;">Email Address *</label>
+                                <input type="email" id="cust-signin-email" placeholder="e.g. a.chen@tech.io" required class="rev-input" style="width:100%;padding:10px 14px;border:1px solid #CBD5E1;border-radius:8px;font-size:0.88rem;outline:none;">
+                            </div>
+                            <div class="review-field-group" style="margin-bottom:1.5rem;">
+                                <label class="field-label" style="display:block;font-size:0.75rem;font-weight:700;color:#475569;margin-bottom:5px;">Phone Number (Optional)</label>
+                                <input type="tel" id="cust-signin-phone" placeholder="e.g. +1 (555) 019-2834" class="rev-input" style="width:100%;padding:10px 14px;border:1px solid #CBD5E1;border-radius:8px;font-size:0.88rem;outline:none;">
+                            </div>
+                            <button type="submit" class="btn-submit-review" style="width:100%;padding:12px;background:#4338CA;color:#FFFFFF;border:none;border-radius:8px;font-weight:800;font-size:0.92rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+                                💬 Start Chatting with CSP Chatbot
+                            </button>
+                        </form>
+
+                        <!-- Quick Demo Fill -->
+                        <div style="margin-top:1.5rem;padding-top:1rem;border-top:1px dashed #E2E8F0;text-align:left;">
+                            <div style="font-size:0.7rem;font-weight:800;color:#94A3B8;letter-spacing:0.5px;margin-bottom:8px;">QUICK-FILL PRESETS:</div>
+                            <div style="display:flex;flex-direction:column;gap:6px;">
+                                <button type="button" onclick="quickFillCustomer('Alice Chen', 'a.chen@tech.io', '+1 (555) 019-2834')" style="text-align:left;padding:7px 10px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:6px;font-size:0.78rem;cursor:pointer;color:#334155;">
+                                    👤 <strong>Alice Chen</strong> (a.chen@tech.io)
+                                </button>
+                                <button type="button" onclick="quickFillCustomer('J. Smith', 'j.smith@corp.com', '+1 (555) 432-8811')" style="text-align:left;padding:7px 10px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:6px;font-size:0.78rem;cursor:pointer;color:#334155;">
+                                    👤 <strong>J. Smith</strong> (j.smith@corp.com)
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="chat-stream" id="chat-stream">
-                        <!-- Initial Fresh Assistant Welcome & Solution Card -->
-                        <div class="msg-bot-group">
-                            <div class="bot-icon-circle">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2">
-                                    <rect x="3" y="11" width="18" height="10" rx="2"/>
-                                    <circle cx="12" cy="5" r="2"/>
-                                    <path d="M12 7v4"/>
-                                    <line x1="8" y1="16" x2="8.01" y2="16"/>
-                                    <line x1="16" y1="16" x2="16.01" y2="16"/>
+                    <!-- Active Chat Area (Unlocked after customer sign in) -->
+                    <div id="chat-active-area" class="hidden" style="display:none;flex-direction:column;height:100%;">
+                        <div class="date-chip">
+                            <span>TODAY • LIVE SUPPORT SESSION</span>
+                        </div>
+
+                        <div class="chat-stream" id="chat-stream">
+                            <!-- Initial Fresh Assistant Welcome & Solution Card -->
+                            <div class="msg-bot-group">
+                                <div class="bot-icon-circle">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2">
+                                        <rect x="3" y="11" width="18" height="10" rx="2"/>
+                                        <circle cx="12" cy="5" r="2"/>
+                                        <path d="M12 7v4"/>
+                                        <line x1="8" y1="16" x2="8.01" y2="16"/>
+                                        <line x1="16" y1="16" x2="16.01" y2="16"/>
+                                    </svg>
+                                </div>
+                                <div class="bot-card-content">
+                                    <div class="bot-card-header">
+                                        <span class="bot-title">CSP Chatbot</span>
+                                        <span class="badge-high-match-green">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+                                            AI ASSISTANT READY
+                                        </span>
+                                    </div>
+                                    <div class="bot-card-body">
+                                        <p id="chat-welcome-msg">Hello! Welcome to <strong>CSP Chatbot</strong>. I am your automated customer support assistant. Type any question below regarding technical errors, account access, or financial queries. If I cannot resolve it or it requires executive attention, I will route it straight to our Higher Officials.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Typing indicator -->
+                        <div id="typing-indicator" class="typing-indicator hidden">
+                            <span>CSP Chatbot is retrieving solution...</span>
+                            <div class="dots-pulse">
+                                <span></span><span></span><span></span>
+                            </div>
+                        </div>
+
+                        <!-- Floating Glass Input Bar -->
+                        <form class="input-floating-bar" onsubmit="handleChatSubmit(event)">
+                            <button type="button" class="btn-input-icon" title="Attach file">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2" stroke-linecap="round">
+                                    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
                                 </svg>
-                            </div>
-                            <div class="bot-card-content">
-                                <div class="bot-card-header">
-                                    <span class="bot-title">GlassSupport AI</span>
-                                    <span class="badge-high-match-green">
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
-                                        HIGH MATCH (98% CONFIDENCE)
-                                    </span>
-                                </div>
-                                <div class="bot-card-body">
-                                    <p>I see you're trying to resolve a 502 Bad Gateway error on the main dashboard. This usually indicates a temporary routing issue between our load balancers. Let's try to fix this in three steps:</p>
-                                    
-                                    <div class="steps-numbered-card">
-                                        <div class="step-item">
-                                            <div class="step-num">1</div>
-                                            <div class="step-text">Clear your browser cache and cookies for the last hour.</div>
-                                        </div>
-                                        <div class="step-item">
-                                            <div class="step-num">2</div>
-                                            <div class="step-text">Ensure you are connected to the corporate VPN (Gateway 4).</div>
-                                        </div>
-                                        <div class="step-item">
-                                            <div class="step-num">3</div>
-                                            <div class="step-text">Attempt a hard refresh (Cmd+Shift+R or Ctrl+F5) on the dashboard page.</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="bot-card-footer">
-                                    <span class="feedback-prompt">Did this resolve your issue?</span>
-                                    <div class="feedback-btn-row">
-                                        <button class="btn-feedback" onclick="sendFeedback(true)">
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>
-                                            Yes, it worked
-                                        </button>
-                                        <button class="btn-feedback" onclick="sendFeedback(false)">
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"></path></svg>
-                                            No, still broken
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                            </button>
+                            <input type="text" id="chat-input" placeholder="Describe your issue or ask CSP Chatbot..." autocomplete="off">
+                            <button type="button" class="btn-input-icon" id="btn-voice-mic" onclick="toggleVoiceRecording()" title="Speak with microphone">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                                    <line x1="12" y1="19" x2="12" y2="23"></line>
+                                    <line x1="8" y1="23" x2="16" y2="23"></line>
+                                </svg>
+                            </button>
+                            <button type="button" class="btn-input-icon" title="Emoji">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+                                    <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                                    <line x1="15" y1="9" x2="15.01" y2="9"></line>
+                                </svg>
+                            </button>
+                            <button type="submit" class="btn-input-send">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                </svg>
+                            </button>
+                        </form>
                     </div>
-
-                    <!-- Typing indicator -->
-                    <div id="typing-indicator" class="typing-indicator hidden">
-                        <span>GlassSupport AI is retrieving solution...</span>
-                        <div class="dots-pulse">
-                            <span></span><span></span><span></span>
-                        </div>
-                    </div>
-
-                    <!-- Floating Glass Input Bar -->
-                    <form class="input-floating-bar" onsubmit="handleChatSubmit(event)">
-                        <button type="button" class="btn-input-icon" title="Attach file">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2" stroke-linecap="round">
-                                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
-                            </svg>
-                        </button>
-                        <input type="text" id="chat-input" placeholder="Describe your issue or type a command..." autocomplete="off">
-                        <button type="button" class="btn-input-icon" id="btn-voice-mic" onclick="toggleVoiceRecording()" title="Speak with microphone">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                                <line x1="12" y1="19" x2="12" y2="23"></line>
-                                <line x1="8" y1="23" x2="16" y2="23"></line>
-                            </svg>
-                        </button>
-                        <button type="button" class="btn-input-icon" title="Emoji">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
-                                <line x1="9" y1="9" x2="9.01" y2="9"></line>
-                                <line x1="15" y1="9" x2="15.01" y2="9"></line>
-                            </svg>
-                        </button>
-                        <button type="submit" class="btn-input-send">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                <line x1="22" y1="2" x2="11" y2="13"></line>
-                                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                            </svg>
-                        </button>
-                    </form>
 
                 </div>
             </section>
@@ -253,19 +269,34 @@
                         </button>
                     </div>
 
-                    <!-- Customer Request Tabs (Pending vs Completed) -->
-                    <div class="req-tabs-nav">
-                        <button class="req-tab-btn active" id="btn-tab-pending" onclick="switchRequestTab('pending')">
-                            ⏳ Pending Requests <span class="tab-badge-pill" id="badge-pending-count">0</span>
-                        </button>
-                        <button class="req-tab-btn" id="btn-tab-completed" onclick="switchRequestTab('completed')">
-                            ✅ Completed Requests <span class="tab-badge-pill" id="badge-completed-count">0</span>
+                    <!-- Customer Not Signed In Prompt -->
+                    <div id="requests-signin-prompt" class="official-login-card-box hidden" style="display:none;max-width:440px;margin:3rem auto;padding:2.5rem 2rem;background:#FFFFFF;border:1px solid #E2E8F0;border-radius:18px;text-align:center;box-shadow:0 10px 25px -3px rgba(0,0,0,0.06);">
+                        <div class="official-login-icon" style="font-size:2.8rem;margin-bottom:0.75rem;">📋</div>
+                        <h2 class="official-login-title" style="font-size:1.35rem;font-weight:800;color:#0F172A;margin-bottom:0.4rem;">Customer Sign-In Required</h2>
+                        <p class="official-login-desc" style="font-size:0.84rem;color:#64748B;line-height:1.5;margin-bottom:1.5rem;">
+                            Please sign in with your Name and Email to view your active requests, live chat session invites, and resolution statuses.
+                        </p>
+                        <button type="button" onclick="promptCustomerSignIn()" class="btn-submit-review" style="width:100%;padding:12px;background:#4338CA;color:#FFFFFF;border:none;border-radius:8px;font-weight:800;font-size:0.92rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+                            🧑 Sign In to Access My Requests
                         </button>
                     </div>
 
-                    <!-- Requests Grid Stream -->
-                    <div class="requests-grid" id="customer-requests-grid">
-                        <!-- Populated dynamically via JS -->
+                    <!-- Signed-in Customer Requests Stream -->
+                    <div id="requests-signed-in-content">
+                        <!-- Customer Request Tabs (Pending vs Completed) -->
+                        <div class="req-tabs-nav">
+                            <button class="req-tab-btn active" id="btn-tab-pending" onclick="switchRequestTab('pending')">
+                                ⏳ Pending Requests <span class="tab-badge-pill" id="badge-pending-count">0</span>
+                            </button>
+                            <button class="req-tab-btn" id="btn-tab-completed" onclick="switchRequestTab('completed')">
+                                ✅ Completed Requests <span class="tab-badge-pill" id="badge-completed-count">0</span>
+                            </button>
+                        </div>
+
+                        <!-- Requests Grid Stream -->
+                        <div class="requests-grid" id="customer-requests-grid">
+                            <!-- Populated dynamically via JS -->
+                        </div>
                     </div>
 
                 </div>
@@ -289,7 +320,7 @@
                         <form id="official-login-form" onsubmit="handleOfficialLogin(event)" style="text-align:left;">
                             <div class="review-field-group" style="margin-bottom:1rem;">
                                 <label class="field-label" style="display:block;font-size:0.75rem;font-weight:700;color:#475569;margin-bottom:5px;">Official Email ID</label>
-                                <input type="email" id="official-login-email" placeholder="e.g. sarah.jenkins.executive@glasssupport.com" required class="rev-input" style="width:100%;padding:10px 14px;border:1px solid #CBD5E1;border-radius:8px;font-size:0.88rem;outline:none;">
+                                <input type="email" id="official-login-email" placeholder="e.g. sarah.jenkins.executive@cspchatbot.com" required class="rev-input" style="width:100%;padding:10px 14px;border:1px solid #CBD5E1;border-radius:8px;font-size:0.88rem;outline:none;">
                             </div>
                             <div class="review-field-group" style="margin-bottom:1.5rem;">
                                 <label class="field-label" style="display:block;font-size:0.75rem;font-weight:700;color:#475569;margin-bottom:5px;">Official Password</label>
@@ -315,7 +346,7 @@
                                     </div>
                                     <div class="desk-subtitle-alert">
                                         <span class="red-alert-dot"></span>
-                                        <span id="desk-urgent-text">Viewing requests assigned to <strong id="hdr-official-email" style="color:#4338CA;">sarah.jenkins.executive@glasssupport.com</strong></span>
+                                        <span id="desk-urgent-text">Viewing requests assigned to <strong id="hdr-official-email" style="color:#4338CA;">sarah.jenkins.executive@cspchatbot.com</strong></span>
                                     </div>
                                 </div>
                             </div>

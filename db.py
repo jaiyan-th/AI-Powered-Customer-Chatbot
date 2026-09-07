@@ -1,6 +1,6 @@
 # db.py
 """
-Database schema & seeding for GlassSupport:
+Database schema & seeding for CSP Chatbot:
 - Requests & Auth-Key System (Pending vs Completed)
 - Live Direct Chat History
 - Issues Knowledge Base (FTS5 + BM25)
@@ -56,7 +56,7 @@ def init_db():
             vectors TEXT DEFAULT '🔗 General',
             assigned_official_name TEXT DEFAULT 'Dr. Sarah Jenkins',
             assigned_official_title TEXT DEFAULT 'Chief Governance & Executive Officer',
-            assigned_official_email TEXT DEFAULT 'sarah.jenkins.executive@glasssupport.com',
+            assigned_official_email TEXT DEFAULT 'sarah.jenkins.executive@cspchatbot.com',
             assigned_official_phone TEXT DEFAULT '+1 (800) 555-0199 (Ext. 401)',
             ai_draft TEXT,
             resolution_notes TEXT,
@@ -251,7 +251,7 @@ def seed_sample_requests(conn=None):
             "🔗 Auth, 👥 RBAC Mismatch",
             "Dr. Sarah Jenkins",
             "Chief Governance & Executive Officer",
-            "sarah.jenkins.executive@glasssupport.com",
+            "sarah.jenkins.executive@cspchatbot.com",
             "+1 (800) 555-0199 (Ext. 401)",
             "Hi Alice, I see you're encountering an admin access mismatch following the RBAC upgrade. I've re-synced your team roles in the identity cluster. Please refresh your session.",
             None,
@@ -274,7 +274,7 @@ def seed_sample_requests(conn=None):
             "💳 Billing, 🔒 Tax Exemption",
             "Marcus Vance",
             "Director of Banking & Financial Integrity",
-            "marcus.vance.director@glasssupport.com",
+            "marcus.vance.director@cspchatbot.com",
             "+1 (888) 452-7722 (Direct)",
             "Hi J. Smith, I have reviewed your enterprise statement and applied the verified tax exemption certificate to your account ledger.",
             None,
@@ -297,7 +297,7 @@ def seed_sample_requests(conn=None):
             "📊 Data Pipeline, 📁 CSV Export",
             "Elena Rostova",
             "Head of Enterprise Security & Data Integrity",
-            "elena.rostova.cso@glasssupport.com",
+            "elena.rostova.cso@cspchatbot.com",
             "+1 (800) 555-0844 (Ext. 102)",
             "Hi R. Woods, our pipeline team has increased the CSV streaming buffer ceiling to resolve truncated exports.",
             "Increased CSV streaming buffer ceiling to 50MB. Customer verified export working.",
@@ -320,7 +320,7 @@ def seed_sample_requests(conn=None):
             "🌐 Network, ⚙️ 502 Error",
             "Dr. Sarah Jenkins",
             "Chief Governance & Executive Officer",
-            "sarah.jenkins.executive@glasssupport.com",
+            "sarah.jenkins.executive@cspchatbot.com",
             "+1 (800) 555-0199 (Ext. 401)",
             "Cleared load balancer proxy session. Verified uptime 99.98%.",
             "Proxy session purged. Operational health confirmed.",
@@ -351,10 +351,10 @@ def seed_sample_chat_history(conn=None):
 
     sample_chats = [
         ("REQ-8923", "a.chen@tech.io", "user", "Alice Chen", "Cannot access admin controls and role permissions following the RBAC infrastructure upgrade.", None, None, "Access & Security"),
-        ("REQ-8923", "a.chen@tech.io", "assistant", "GlassSupport AI", "I couldn't resolve this automatically. An active request REQ-8923 has been created. Your Authentication Key `AUTH-8923` has been sent to your email. Connected you to Dr. Sarah Jenkins.", "Connected to Higher Official", 94.0, "Access & Security"),
+        ("REQ-8923", "a.chen@tech.io", "assistant", "CSP Chatbot", "I couldn't resolve this automatically. An active request REQ-8923 has been created. Your Authentication Key `AUTH-8923` has been sent to your email. Connected you to Dr. Sarah Jenkins.", "Connected to Higher Official", 94.0, "Access & Security"),
         ("REQ-8923", "a.chen@tech.io", "official", "Dr. Sarah Jenkins", "Hello Alice, I have opened a secure direct executive session for your case REQ-8923. I am re-syncing your team roles now.", "👑 Higher Official", None, "Executive Desk"),
         ("REQ-8924", "j.smith@corp.com", "user", "J. Smith", "Enterprise billing invoice requires confidential VAT tax exemption adjustment for March 2026.", None, None, "Finance & Billing"),
-        ("REQ-8924", "j.smith@corp.com", "assistant", "GlassSupport AI", "🔒 Confidentiality Protected. Direct request REQ-8924 opened. Authentication Key `AUTH-8924` sent to j.smith@corp.com. Dispatched to Marcus Vance.", "Privacy Protected", None, "Finance & Billing")
+        ("REQ-8924", "j.smith@corp.com", "assistant", "CSP Chatbot", "🔒 Confidentiality Protected. Direct request REQ-8924 opened. Authentication Key `AUTH-8924` sent to j.smith@corp.com. Dispatched to Marcus Vance.", "Privacy Protected", None, "Finance & Billing")
     ]
 
     for req_id, user_email, role, sender, content, badge, score, dept in sample_chats:

@@ -1,7 +1,8 @@
 // static/app.js
-// Complete Controller for GlassSupport Request & Authentication Key Architecture
+// Complete Controller for CSP Chatbot Request & Authentication Key Architecture
 
-let activeUserEmail = "a.chen@tech.io";
+let currentCustomer = JSON.parse(localStorage.getItem('csp_customer') || 'null');
+let activeUserEmail = currentCustomer ? currentCustomer.email : "a.chen@tech.io";
 let currentRequestTab = "pending";
 let officialQueueTab = "pending";
 let allOfficialRequests = { pending: [], completed: [] };
@@ -13,6 +14,7 @@ let isRecording = false;
 let recognition = null;
 
 document.addEventListener("DOMContentLoaded", () => {
+    updateCustomerUIState();
     initSpeechRecognition();
     loadCustomerRequests();
     loadOfficialDashboard();
@@ -23,7 +25,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const roomParam = urlParams.get('room');
     if (roomParam) {
         setTimeout(() => {
-            openRoomModal(roomParam, "Higher Official", activeUserEmail.split("@")[0].capitalize());
+            const displayName = currentCustomer ? currentCustomer.name : (activeUserEmail ? activeUserEmail.split("@")[0].capitalize() : "Customer");
+            openRoomModal(roomParam, "Higher Official", displayName);
             showToast(`💬 Joined Live Chat Room: ${roomParam}`, "success");
         }, 600);
     }
@@ -137,16 +140,135 @@ function switchView(viewName) {
     }
 }
 
-function onUserIdentityChanged(email) {
-    activeUserEmail = email;
-    const revEmailInput = document.getElementById("rev-user-email");
-    if (revEmailInput) revEmailInput.value = email;
-    const revNameInput = document.getElementById("rev-user-name");
-    if (revNameInput) revNameInput.value = email.split("@")[0].capitalize();
+function updateCustomerUIState() {
+    const signinScreen = document.getElementById("customer-signin-screen");
+    const activeChatArea = document.getElementById("chat-active-area");
+    const signedInPill = document.getElementById("customer-signed-in-pill");
+    const signinBtn = document.getElementById("customer-signin-btn");
+    const requestsPrompt = document.getElementById("requests-signin-prompt");
+    const requestsContent = document.getElementById("requests-signed-in-content");
 
-    showToast(`Switched active user: ${email}`, "info");
-    loadCustomerRequests();
+    if (currentCustomer) {
+        if (signinScreen) {
+            signinScreen.classList.add("hidden");
+            signinScreen.style.display = "none";
+        }
+        if (activeChatArea) {
+            activeChatArea.classList.remove("hidden");
+            activeChatArea.style.display = "flex";
+        }
+        if (signedInPill) {
+            signedInPill.classList.remove("hidden");
+            signedInPill.style.display = "inline-flex";
+            const nameEl = document.getElementById("topbar-cust-name");
+            if (nameEl) nameEl.innerText = currentCustomer.name;
+            const emailEl = document.getElementById("topbar-cust-email");
+            if (emailEl) emailEl.innerText = currentCustomer.email;
+        }
+        if (signinBtn) {
+            signinBtn.classList.add("hidden");
+            signinBtn.style.display = "none";
+        }
+        if (requestsPrompt) {
+            requestsPrompt.classList.add("hidden");
+            requestsPrompt.style.display = "none";
+        }
+        if (requestsContent) {
+            requestsContent.classList.remove("hidden");
+            requestsContent.style.display = "block";
+        }
+        activeUserEmail = currentCustomer.email;
+        const revEmailInput = document.getElementById("rev-user-email");
+        if (revEmailInput) revEmailInput.value = currentCustomer.email;
+        const revNameInput = document.getElementById("rev-user-name");
+        if (revNameInput) revNameInput.value = currentCustomer.name;
+    } else {
+        if (signinScreen) {
+            signinScreen.classList.remove("hidden");
+            signinScreen.style.display = "block";
+        }
+        if (activeChatArea) {
+            activeChatArea.classList.add("hidden");
+            activeChatArea.style.display = "none";
+        }
+        if (signedInPill) {
+            signedInPill.classList.add("hidden");
+            signedInPill.style.display = "none";
+        }
+        if (signinBtn) {
+            signinBtn.classList.remove("hidden");
+            signinBtn.style.display = "inline-flex";
+        }
+        if (requestsPrompt) {
+            requestsPrompt.classList.remove("hidden");
+            requestsPrompt.style.display = "block";
+        }
+        if (requestsContent) {
+            requestsContent.classList.add("hidden");
+            requestsContent.style.display = "none";
+        }
+    }
 }
+
+function handleCustomerSignIn(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    const nameInput = document.getElementById("cust-signin-name");
+    const emailInput = document.getElementById("cust-signin-email");
+    const phoneInput = document.getElementById("cust-signin-phone");
+
+    const name = nameInput ? nameInput.value.trim() : "";
+    const email = emailInput ? emailInput.value.trim() : "";
+    const phone = phoneInput && phoneInput.value.trim() ? phoneInput.value.trim() : "+1 (555) 019-2834";
+
+    if (!name || !email) {
+        showToast("Please enter your name and email address to start chatting.", "error");
+        return;
+    }
+
+    currentCustomer = { name, email, phone };
+    localStorage.setItem("csp_customer", JSON.stringify(currentCustomer));
+    activeUserEmail = email;
+
+    const welcomeMsg = document.getElementById("chat-welcome-msg");
+    if (welcomeMsg) {
+        welcomeMsg.innerHTML = `Hello <strong>${name}</strong>! Welcome to <strong>CSP Chatbot</strong>. I am your automated customer support assistant. Type any question below regarding technical errors, account access, or financial queries. If I cannot resolve it or it requires executive attention, I will route it straight to our Higher Officials.`;
+    }
+
+    updateCustomerUIState();
+    loadCustomerRequests();
+    showToast(`👋 Welcome, ${name}! CSP Chatbot is ready.`, "success");
+
+    const chatInput = document.getElementById("chat-input");
+    if (chatInput) setTimeout(() => chatInput.focus(), 200);
+}
+
+function quickFillCustomer(name, email, phone) {
+    const nameInput = document.getElementById("cust-signin-name");
+    const emailInput = document.getElementById("cust-signin-email");
+    const phoneInput = document.getElementById("cust-signin-phone");
+    if (nameInput) nameInput.value = name;
+    if (emailInput) emailInput.value = email;
+    if (phoneInput) phoneInput.value = phone;
+    handleCustomerSignIn(new Event("submit"));
+}
+
+function handleCustomerSignOut() {
+    localStorage.removeItem("csp_customer");
+    currentCustomer = null;
+    updateCustomerUIState();
+    showToast("Signed out of customer session.", "info");
+}
+
+function promptCustomerSignIn() {
+    switchView("chat");
+    const signinScreen = document.getElementById("customer-signin-screen");
+    if (signinScreen) {
+        signinScreen.scrollIntoView({ behavior: "smooth" });
+        const nameInput = document.getElementById("cust-signin-name");
+        if (nameInput) setTimeout(() => nameInput.focus(), 300);
+    }
+}
+
 
 String.prototype.capitalize = function() {
     return this.charAt(0).toUpperCase() + this.slice(1);
@@ -167,6 +289,12 @@ function formatText(text) {
 // -----------------------------------------------------------------------------
 async function handleChatSubmit(e) {
     if (e && e.preventDefault) e.preventDefault();
+
+    if (!currentCustomer) {
+        showToast("Please sign in as a customer before sending messages.", "info");
+        promptCustomerSignIn();
+        return;
+    }
 
     const input = document.getElementById("chat-input");
     const query = input.value.trim();
@@ -208,11 +336,13 @@ async function handleChatSubmit(e) {
             const off = data.assigned_official || {
                 name: "Dr. Sarah Jenkins",
                 title: "Chief Governance & Executive Officer",
-                email: "sarah.jenkins.executive@glasssupport.com"
+                email: "sarah.jenkins.executive@cspchatbot.com"
             };
             const formId = "esc-form-" + Date.now();
             const safeQuery = query.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-            const defaultName = activeUserEmail.split("@")[0].capitalize();
+            const defaultName = currentCustomer ? currentCustomer.name : "Customer";
+            const defaultEmail = currentCustomer ? currentCustomer.email : activeUserEmail;
+            const defaultPhone = currentCustomer && currentCustomer.phone ? currentCustomer.phone : "+1 (555) 019-2834";
 
             actionCardHTML = `
                 <div id="${formId}" style="background:#F8FAFC;border:1px solid #CBD5E1;border-left:4px solid #4338CA;border-radius:12px;padding:14px;margin-top:12px;">
@@ -229,12 +359,12 @@ async function handleChatSubmit(e) {
                         </div>
                         <div>
                             <label style="font-size:0.72rem;font-weight:700;color:#475569;display:block;margin-bottom:2px;">Your Email Address:</label>
-                            <input type="email" id="${formId}-email" value="${activeUserEmail}" style="width:100%;box-sizing:border-box;border:1px solid #CBD5E1;border-radius:6px;padding:7px 10px;font-size:0.82rem;" placeholder="e.g. user@company.com">
+                            <input type="email" id="${formId}-email" value="${defaultEmail}" style="width:100%;box-sizing:border-box;border:1px solid #CBD5E1;border-radius:6px;padding:7px 10px;font-size:0.82rem;" placeholder="e.g. user@company.com">
                         </div>
                     </div>
                     <div style="margin-bottom:12px;">
                         <label style="font-size:0.72rem;font-weight:700;color:#475569;display:block;margin-bottom:2px;">Your Phone Number:</label>
-                        <input type="tel" id="${formId}-phone" value="+1 (555) 019-2834" style="width:100%;box-sizing:border-box;border:1px solid #CBD5E1;border-radius:6px;padding:7px 10px;font-size:0.82rem;" placeholder="e.g. +1 (555) 234-5678 or mobile number">
+                        <input type="tel" id="${formId}-phone" value="${defaultPhone}" style="width:100%;box-sizing:border-box;border:1px solid #CBD5E1;border-radius:6px;padding:7px 10px;font-size:0.82rem;" placeholder="e.g. +1 (555) 234-5678 or mobile number">
                     </div>
                     <button type="button" class="btn-primary" style="padding:8px 16px;font-size:0.82rem;font-weight:700;display:flex;align-items:center;gap:6px;" onclick="submitCustomerEscalation('${formId}', '${safeQuery}')">
                         🚀 Submit Details to Higher Official
@@ -286,7 +416,7 @@ async function handleChatSubmit(e) {
                 </div>
                 <div class="bot-card-content">
                     <div class="bot-card-header">
-                        <span class="bot-title">GlassSupport AI</span>
+                        <span class="bot-title">CSP Chatbot</span>
                         ${badgeHTML}
                     </div>
                     <div class="bot-card-body">
@@ -973,7 +1103,7 @@ async function initiateOfficialChatRoom() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 request_id: req.request_id,
-                official_email: currentLoggedInOfficial ? currentLoggedInOfficial.email : "sarah.jenkins.executive@glasssupport.com",
+                official_email: currentLoggedInOfficial ? currentLoggedInOfficial.email : "sarah.jenkins.executive@cspchatbot.com",
                 official_name: currentLoggedInOfficial ? currentLoggedInOfficial.name : "Dr. Sarah Jenkins"
             })
         });
@@ -1173,7 +1303,7 @@ async function initiateOfficialCall() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 request_id: req.request_id,
-                official_email: currentLoggedInOfficial ? currentLoggedInOfficial.email : "sarah.jenkins.executive@glasssupport.com",
+                official_email: currentLoggedInOfficial ? currentLoggedInOfficial.email : "sarah.jenkins.executive@cspchatbot.com",
                 official_name: currentLoggedInOfficial ? currentLoggedInOfficial.name : "Dr. Sarah Jenkins"
             })
         });
@@ -1442,7 +1572,7 @@ async function submitOTPVerification() {
             <div class="msg-bot-group">
                 <div class="bot-icon-circle">🛡️</div>
                 <div class="bot-card-content">
-                    <div class="bot-card-header"><span class="bot-title">GlassSupport Security</span><span class="badge-high-match-green">VERIFIED IDENTITY</span></div>
+                    <div class="bot-card-header"><span class="bot-title">CSP Chatbot Security</span><span class="badge-high-match-green">VERIFIED IDENTITY</span></div>
                     <div class="bot-card-body">
                         <p><b>Account Ledger Statement for ${activeUserEmail}:</b><br>
                         • Available Balance: <b>$14,850.00 USD</b><br>

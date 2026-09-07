@@ -40,7 +40,7 @@ from backend import (
 init_db()
 
 app = FastAPI(
-    title="CSP (Customer Support Provider) — Customer Support Platform",
+    title="CSP Chatbot — Customer Support Platform",
     description="Customer Request & Higher Official Authentication Hub",
     version="5.0.0"
 )

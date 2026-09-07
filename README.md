@@ -24,9 +24,9 @@ An enterprise-grade **Customer Support Platform (CSP)** built with FastAPI, SQLi
 ### 4. 🛡️ Higher Officials Authentication & Mailbox Isolation
 * **Executive Login Portal**: Higher Officials must authenticate with their executive email / ID and security passcode.
 * **Mailbox Isolation**:
-  * **Dr. Sarah Jenkins** (`sarah.jenkins.executive@glasssupport.com`): Accesses RBAC, governance, and admin privilege requests.
-  * **Marcus Vance** (`marcus.vance.director@glasssupport.com`): Accesses wire transfers, tax exemptions, and banking escalations.
-  * **Elena Rostova** (`elena.rostova.cso@glasssupport.com`): Accesses data pipelines, CSV exports, and security issues.
+  * **Dr. Sarah Jenkins** (`sarah.jenkins.executive@cspchatbot.com`): Accesses RBAC, governance, and admin privilege requests.
+  * **Marcus Vance** (`marcus.vance.director@cspchatbot.com`): Accesses wire transfers, tax exemptions, and banking escalations.
+  * **Elena Rostova** (`elena.rostova.cso@cspchatbot.com`): Accesses data pipelines, CSV exports, and security issues.
 * **Live Chat Messenger Console**: Higher Officials reply directly into the customer's chat thread in real-time.
 * **One-Click Resolution**: Resolving a request archives it and indexes the solution into the AI knowledge base.
 

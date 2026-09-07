@@ -1,6 +1,6 @@
 # backend.py
 """
-Backend Engine for GlassSupport:
+Backend Engine for CSP Chatbot:
 - Hybrid Semantic & SQLite FTS5 (BM25) Search
 - Executive Routing & Higher Official Directory
 - Dynamic Request & Authentication Key Lifecycle (Pending vs Completed)
@@ -18,21 +18,21 @@ HIGHER_OFFICIALS_DIRECTORY = [
     {
         "name": "Dr. Sarah Jenkins",
         "title": "Chief Governance & Executive Officer",
-        "email": "sarah.jenkins.executive@glasssupport.com",
+        "email": "sarah.jenkins.executive@cspchatbot.com",
         "phone": "+1 (800) 555-0199 (Ext. 401)",
         "dept": "Executive Governance & Privacy"
     },
     {
         "name": "Marcus Vance",
         "title": "Director of Banking & Financial Integrity",
-        "email": "marcus.vance.director@glasssupport.com",
+        "email": "marcus.vance.director@cspchatbot.com",
         "phone": "+1 (888) 452-7722 (Direct)",
         "dept": "Banking & Financial Services"
     },
     {
         "name": "Elena Rostova",
         "title": "Head of Enterprise Security & Data Integrity",
-        "email": "elena.rostova.cso@glasssupport.com",
+        "email": "elena.rostova.cso@cspchatbot.com",
         "phone": "+1 (800) 555-0844 (Ext. 102)",
         "dept": "Access, Infrastructure & Security"
     }
@@ -145,7 +145,7 @@ def chat_with_bot(user_query: str, user_email: str = "customer@example.com", cat
             "🔒 **Identity Verification Required**\n\n"
             "To protect your confidential financial records, please enter the **6-digit verification code** sent to your email."
         )
-        log_message(None, user_email_clean, "assistant", "GlassSupport AI", msg, badge="2FA Auth Required")
+        log_message(None, user_email_clean, "assistant", "CSP Chatbot", msg, badge="2FA Auth Required")
         return {
             "matched": True,
             "badge": "2FA Security Verification",
@@ -180,7 +180,7 @@ def chat_with_bot(user_query: str, user_email: str = "customer@example.com", cat
     match = query_knowledge_base(user_query, category)
     if match and match["confidence_score"] >= 50.0:
         badge = f"High Match ({match['confidence_score']}% Confidence)"
-        log_message(None, user_email_clean, "assistant", "GlassSupport AI", match["solution_text"], badge=badge, score=match["confidence_score"], department=match["department"])
+        log_message(None, user_email_clean, "assistant", "CSP Chatbot", match["solution_text"], badge=badge, score=match["confidence_score"], department=match["department"])
         return {
             "matched": True,
             "badge": badge,
@@ -256,7 +256,7 @@ def escalate_inquiry_to_official(user_name: str, user_email: str, user_phone: st
         f"*(When {official['name']} logs into their official account, they will review your inquiry, contact you via email, and can start a **Live Chat Room** or initiate a **Voice Call** directly with you.)*"
     )
 
-    log_message(request_id, user_email_clean, "assistant", "GlassSupport AI", escalation_text, badge="Dispatched to Official", department=official['dept'])
+    log_message(request_id, user_email_clean, "assistant", "CSP Chatbot", escalation_text, badge="Dispatched to Official", department=official['dept'])
 
     return {
         "success": True,
@@ -564,8 +564,13 @@ def authenticate_higher_official(email: str, passcode: str = "") -> Dict[str, An
             "message": "Please enter your official password."
         }
 
+    user_part = email_clean.split("@")[0].lower()
     for off in HIGHER_OFFICIALS_DIRECTORY:
-        if off["email"].lower() == email_clean or email_clean in off["email"].lower() or off["name"].lower() == email_clean:
+        off_user = off["email"].split("@")[0].lower()
+        if (off["email"].lower() == email_clean or 
+            off_user in email_clean or 
+            user_part == off_user or
+            off["name"].lower() == email_clean):
             return {
                 "success": True,
                 "message": f"Welcome back, {off['name']}!",
@@ -594,11 +599,12 @@ def get_all_official_requests(official_email: Optional[str] = None) -> Dict[str,
     cursor = conn.cursor()
 
     if official_email and official_email.strip():
+        user_part = official_email.split("@")[0].lower()
         cursor.execute("""
             SELECT * FROM requests
-            WHERE LOWER(assigned_official_email) = LOWER(?)
+            WHERE LOWER(assigned_official_email) = LOWER(?) OR LOWER(assigned_official_email) LIKE ?
             ORDER BY CASE WHEN status = 'Pending' THEN 1 ELSE 2 END, id DESC;
-        """, (official_email.strip(),))
+        """, (official_email.strip(), f"%{user_part}%"))
     else:
         cursor.execute("""
             SELECT * FROM requests
@@ -649,7 +655,7 @@ def submit_customer_review(user_name: str, user_email: str, rating: int, issue_f
                 request_id, auth_key, user_name, user_role, user_email, user_phone, query_title, query_text, query_summary,
                 status, priority, is_confidential, department, vectors, assigned_official_name, assigned_official_title,
                 assigned_official_email, assigned_official_phone, ai_draft, confidence_score, created_at
-            ) VALUES (?, ?, ?, 'Customer Review Escalation', ?, '+1 (415) 890-2134', ?, ?, ?, 'Pending', 'Urgent', 1, 'Executive Governance', '⚠️ Unresolved Feedback, 🌟 CSAT', 'Dr. Sarah Jenkins', 'Chief Governance & Executive Officer', 'sarah.jenkins.executive@glasssupport.com', '+1 (800) 555-0199 (Ext. 401)', ?, 98, CURRENT_TIMESTAMP);
+            ) VALUES (?, ?, ?, 'Customer Review Escalation', ?, '+1 (415) 890-2134', ?, ?, ?, 'Pending', 'Urgent', 1, 'Executive Governance', '⚠️ Unresolved Feedback, 🌟 CSAT', 'Dr. Sarah Jenkins', 'Chief Governance & Executive Officer', 'sarah.jenkins.executive@cspchatbot.com', '+1 (800) 555-0199 (Ext. 401)', ?, 98, CURRENT_TIMESTAMP);
         """, (escalated_request_id, auth_key, user_name, user_email.strip().lower(), f"Unresolved Review: {issue_faced}", full_complaint, query_summary, ai_draft))
 
     cursor.execute("""
