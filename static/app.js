@@ -17,6 +17,16 @@ document.addEventListener("DOMContentLoaded", () => {
     loadCustomerRequests();
     loadOfficialDashboard();
     loadCustomerReviews();
+
+    // Check for ?room= in URL to automatically join live chat room
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomParam = urlParams.get('room');
+    if (roomParam) {
+        setTimeout(() => {
+            openRoomModal(roomParam, "Higher Official", activeUserEmail.split("@")[0].capitalize());
+            showToast(`💬 Joined Live Chat Room: ${roomParam}`, "success");
+        }, 600);
+    }
 });
 
 // -----------------------------------------------------------------------------
@@ -187,20 +197,58 @@ async function handleChatSubmit(e) {
 
         if (data.matched) {
             badgeHTML = `<span class="badge-high-match-green"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg> HIGH MATCH (${data.score || 98}% CONFIDENCE)</span>`;
+        } else if (data.requires_contact) {
+            badgeHTML = `<span class="badge-high-match-green" style="background:#FEF3C7;color:#92400E;">⚠️ ESCALATION REQUIRED</span>`;
+            const off = data.assigned_official || {
+                name: "Dr. Sarah Jenkins",
+                title: "Chief Governance & Executive Officer",
+                email: "sarah.jenkins.executive@glasssupport.com"
+            };
+            const formId = "esc-form-" + Date.now();
+            const safeQuery = query.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+            const defaultName = activeUserEmail.split("@")[0].capitalize();
+
+            actionCardHTML = `
+                <div id="${formId}" style="background:#F8FAFC;border:1px solid #CBD5E1;border-left:4px solid #4338CA;border-radius:12px;padding:14px;margin-top:12px;">
+                    <div style="font-weight:800;font-size:0.85rem;color:#1E293B;margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+                        <span>👑 ESCALATE INQUIRY TO HIGHER OFFICIAL</span>
+                    </div>
+                    <p style="font-size:0.78rem;color:#64748B;margin-bottom:10px;line-height:1.4;">
+                        Our chatbot cannot answer this question directly. Please provide your contact details below so <b>${off.name}</b> (${off.title}) can review your inquiry, contact you via email (<b>${off.email}</b>), and start a live chat session with you.
+                    </p>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+                        <div>
+                            <label style="font-size:0.72rem;font-weight:700;color:#475569;display:block;margin-bottom:2px;">Your Full Name:</label>
+                            <input type="text" id="${formId}-name" value="${defaultName}" style="width:100%;box-sizing:border-box;border:1px solid #CBD5E1;border-radius:6px;padding:7px 10px;font-size:0.82rem;" placeholder="e.g. Alice Chen">
+                        </div>
+                        <div>
+                            <label style="font-size:0.72rem;font-weight:700;color:#475569;display:block;margin-bottom:2px;">Your Email Address:</label>
+                            <input type="email" id="${formId}-email" value="${activeUserEmail}" style="width:100%;box-sizing:border-box;border:1px solid #CBD5E1;border-radius:6px;padding:7px 10px;font-size:0.82rem;" placeholder="e.g. user@company.com">
+                        </div>
+                    </div>
+                    <div style="margin-bottom:12px;">
+                        <label style="font-size:0.72rem;font-weight:700;color:#475569;display:block;margin-bottom:2px;">Your Phone Number:</label>
+                        <input type="tel" id="${formId}-phone" value="+1 (555) 019-2834" style="width:100%;box-sizing:border-box;border:1px solid #CBD5E1;border-radius:6px;padding:7px 10px;font-size:0.82rem;" placeholder="e.g. +1 (555) 234-5678 or mobile number">
+                    </div>
+                    <button type="button" class="btn-primary" style="padding:8px 16px;font-size:0.82rem;font-weight:700;display:flex;align-items:center;gap:6px;" onclick="submitCustomerEscalation('${formId}', '${safeQuery}')">
+                        🚀 Submit Details to Higher Official
+                    </button>
+                </div>
+            `;
         } else {
             // Connected to Higher Official with Auth Key
-            badgeHTML = `<span class="badge-high-match-green" style="background:#FEE2E2;color:#DC2626;">🔒 CONNECTED TO HIGHER OFFICIAL (${data.request_id})</span>`;
-            const off = data.assigned_official;
+            badgeHTML = `<span class="badge-high-match-green" style="background:#FEE2E2;color:#DC2626;">🔒 CONNECTED TO HIGHER OFFICIAL (${data.request_id || ''})</span>`;
+            const off = data.assigned_official || {};
             actionCardHTML = `
                 <div style="background:#FFFFFF;border:1px solid #E2E8F0;border-left:4px solid #DC2626;border-radius:12px;padding:12px;margin-top:12px;">
                     <div style="display:flex;align-items:center;gap:8px;font-size:0.75rem;font-weight:800;color:#DC2626;margin-bottom:6px;">
                         <span>👑 DESIGNATED HIGHER OFFICIAL CONTACT</span>
                     </div>
-                    <div style="font-weight:800;font-size:0.92rem;color:#0F172A;">${off.name}</div>
-                    <div style="font-size:0.75rem;color:#64748B;margin-bottom:8px;">${off.title}</div>
+                    <div style="font-weight:800;font-size:0.92rem;color:#0F172A;">${off.name || 'Higher Official'}</div>
+                    <div style="font-size:0.75rem;color:#64748B;margin-bottom:8px;">${off.title || 'Executive'}</div>
                     <div style="display:flex;gap:8px;font-size:0.78rem;margin-bottom:10px;">
-                        <a href="mailto:${off.email}" style="color:#4338CA;text-decoration:none;font-weight:700;background:#F8FAFC;padding:3px 8px;border-radius:6px;">✉️ ${off.email}</a>
-                        <a href="tel:${off.phone}" style="color:#4338CA;text-decoration:none;font-weight:700;background:#F8FAFC;padding:3px 8px;border-radius:6px;">📞 ${off.phone}</a>
+                        <a href="mailto:${off.email}" style="color:#4338CA;text-decoration:none;font-weight:700;background:#F8FAFC;padding:3px 8px;border-radius:6px;">✉️ ${off.email || ''}</a>
+                        <a href="tel:${off.phone}" style="color:#4338CA;text-decoration:none;font-weight:700;background:#F8FAFC;padding:3px 8px;border-radius:6px;">📞 ${off.phone || ''}</a>
                     </div>
                     
                     <div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:0.78rem;color:#92400E;">
@@ -262,6 +310,74 @@ async function handleChatSubmit(e) {
     } catch (err) {
         typing.classList.add("hidden");
         showToast("Error connecting to support backend: " + err.message, "error");
+    }
+}
+
+async function submitCustomerEscalation(formId, queryText) {
+    const nameInput = document.getElementById(`${formId}-name`);
+    const emailInput = document.getElementById(`${formId}-email`);
+    const phoneInput = document.getElementById(`${formId}-phone`);
+
+    const name = nameInput ? nameInput.value.trim() : "Customer";
+    const email = emailInput ? emailInput.value.trim() : activeUserEmail;
+    const phone = phoneInput ? phoneInput.value.trim() : "Not Provided";
+
+    if (!email) {
+        showToast("Please enter a valid email address.", "error");
+        return;
+    }
+    if (!phone) {
+        showToast("Please enter a contact phone number.", "error");
+        return;
+    }
+
+    try {
+        const res = await fetch("/api/escalate-to-official", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                user_name: name,
+                user_email: email,
+                user_phone: phone,
+                query: queryText
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(`✅ Escalated to Higher Official ${data.assigned_official.name}!`, "success");
+            activeUserEmail = email;
+
+            const formCard = document.getElementById(formId);
+            if (formCard) {
+                formCard.innerHTML = `
+                    <div style="background:#ECFDF5;border:1px solid #6EE7B7;border-radius:10px;padding:12px;margin-top:6px;">
+                        <div style="font-weight:800;color:#065F46;font-size:0.85rem;margin-bottom:6px;">
+                            ✅ Successfully Forwarded to Higher Official!
+                        </div>
+                        <div style="font-size:0.78rem;color:#047857;line-height:1.4;margin-bottom:8px;">
+                            Your inquiry, contact phone (<b>${data.customer.phone}</b>), and email have been dispatched to <b>${data.assigned_official.name}</b> (${data.assigned_official.title}). The official will contact you via email and can launch a live chat session.
+                        </div>
+                        <div style="background:#FFFFFF;border:1px solid #A7F3D0;border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:0.8rem;color:#065F46;">
+                            🔑 <b>Your Authentication Key:</b> <code style="font-weight:800;color:#047857;font-size:0.9rem;">${data.auth_key}</code> 
+                            &bull; <b>Ticket ID:</b> <code>${data.request_id}</code>
+                        </div>
+                        <div style="display:flex;gap:8px;">
+                            <button type="button" class="btn-primary" style="padding:6px 12px;font-size:0.8rem;" onclick="promptAuthKeyToChat('${data.request_id}', '${data.auth_key}', '${data.assigned_official.name}')">
+                                🔑 Continue Live Chat
+                            </button>
+                            <button type="button" class="btn-cancel" style="padding:6px 12px;font-size:0.8rem;" onclick="switchView('requests')">
+                                📑 View in My Requests
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            loadCustomerRequests();
+            loadOfficialDashboard();
+        }
+    } catch (err) {
+        showToast("Error escalating to official: " + err.message, "error");
     }
 }
 
@@ -614,7 +730,7 @@ function renderOfficialQueue() {
     tbody.innerHTML = list.map(req => {
         const isSelected = selectedOfficialRequestId === req.request_id;
         const initial = req.user_name ? req.user_name.substring(0, 2).toUpperCase() : req.user_email[0].toUpperCase();
-        const statusBadge = req.status === "Pending" ? `<span class="req-status-pill pending">PENDING</span>` : `<span class="req-status-pill completed">COMPLETED</span>`;
+        const statusBadge = req.status === "Pending" ? `<span class="req-status-pill pending">PENDING</span>` : `<span class="req-status-pill completed">SOLVED</span>`;
 
         return `
             <tr class="${isSelected ? 'active-row' : ''}" onclick="selectOfficialRequest('${req.request_id}')">
@@ -622,10 +738,16 @@ function renderOfficialQueue() {
                 <td>
                     <div class="table-user-cell">
                         <span class="user-init-avatar">${initial}</span>
-                        <span>${req.user_email}</span>
+                        <div>
+                            <div style="font-weight:700;color:#0F172A;font-size:0.84rem;">${req.user_name || 'Customer'}</div>
+                            <div style="font-size:0.7rem;color:#64748B;">${req.user_email} • ${req.user_phone || ''}</div>
+                        </div>
                     </div>
                 </td>
-                <td style="color:#475569;">${req.query_summary}</td>
+                <td style="color:#475569;font-size:0.8rem;">
+                    <div>${req.query_summary}</div>
+                    ${req.status === 'Completed' && req.resolution_notes ? `<div style="font-size:0.7rem;color:#059669;margin-top:2px;"><b>Resolution:</b> ${req.resolution_notes.substring(0, 45)}...</div>` : ''}
+                </td>
                 <td>${statusBadge}</td>
             </tr>
         `;
@@ -647,9 +769,19 @@ function selectOfficialRequest(requestId) {
     // Populate Right Panel
     document.getElementById("panel-request-id").innerText = req.request_id;
     document.getElementById("panel-auth-key").innerText = req.auth_key;
-    document.getElementById("panel-badge-status").innerText = req.status === "Pending" ? "PENDING REQUEST" : "COMPLETED REQUEST";
+    document.getElementById("panel-badge-status").innerText = req.status === "Pending" ? "PENDING REQUEST" : "SOLVED / COMPLETED";
     document.getElementById("panel-issue-title").innerText = req.query_title;
-    document.getElementById("panel-customer-name").innerText = req.user_name || req.user_email.split("@")[0];
+    
+    // Customer Contact Details
+    const nameEl = document.getElementById("panel-customer-name");
+    if (nameEl) nameEl.innerText = req.user_name || req.user_email.split("@")[0];
+    const emailEl = document.getElementById("panel-customer-email");
+    if (emailEl) emailEl.innerText = req.user_email;
+    const phoneEl = document.getElementById("panel-customer-phone");
+    if (phoneEl) phoneEl.innerText = req.user_phone || "Not Provided";
+    const queryEl = document.getElementById("panel-customer-full-query");
+    if (queryEl) queryEl.innerText = req.query_text || req.query_summary || req.query_title;
+    
     document.getElementById("panel-customer-role").innerText = req.user_role || "Member";
     document.getElementById("panel-customer-avatar").innerText = req.user_name ? req.user_name.substring(0, 2).toUpperCase() : "AC";
     
@@ -662,20 +794,49 @@ function selectOfficialRequest(requestId) {
     document.getElementById("panel-ai-draft-body").innerText = req.ai_draft || "Hi, I have reviewed your request and am working on resolving it for you.";
     document.getElementById("desk-response-input").value = "";
 
-    // Toggle Room Status & Active Notice
+    // Toggle Room Status & Active Notice & Share Link
     const roomBanner = document.getElementById("room-active-banner");
     const convStatus = document.getElementById("panel-conv-status");
+    const shareLinkInput = document.getElementById("panel-share-link-input");
+
     if (req.chat_room_id) {
         roomBanner.classList.remove("hidden");
         document.getElementById("panel-active-room-id").innerText = req.chat_room_id;
         convStatus.innerText = "ROOM ACTIVE";
         convStatus.style.background = "#DCFCE7";
         convStatus.style.color = "#15803D";
+        if (shareLinkInput) {
+            shareLinkInput.value = `${window.location.origin}/?room=${encodeURIComponent(req.chat_room_id)}&req=${encodeURIComponent(req.request_id)}`;
+        }
     } else {
         roomBanner.classList.add("hidden");
         convStatus.innerText = "AWAITING ACTION";
         convStatus.style.background = "#E0E7FF";
         convStatus.style.color = "#3730A3";
+        if (shareLinkInput) shareLinkInput.value = "";
+    }
+
+    // Toggle Pending vs Completed Actions
+    const compBox = document.getElementById("panel-completed-notes-box");
+    const compText = document.getElementById("panel-completed-notes-text");
+    const btnSolved = document.getElementById("btn-mark-request-solved");
+    const btnReply = document.getElementById("btn-send-official-reply");
+
+    if (req.status === "Completed") {
+        if (compBox) compBox.classList.remove("hidden");
+        if (compText) compText.innerText = req.resolution_notes || "Resolved and verified by Higher Official.";
+        if (btnSolved) {
+            btnSolved.innerText = "✅ Solved";
+            btnSolved.disabled = true;
+            btnSolved.style.opacity = "0.6";
+        }
+    } else {
+        if (compBox) compBox.classList.add("hidden");
+        if (btnSolved) {
+            btnSolved.innerText = "✅ Mark as Solved";
+            btnSolved.disabled = false;
+            btnSolved.style.opacity = "1";
+        }
     }
 
     // Load conversation thread in drawer
@@ -822,6 +983,49 @@ async function initiateOfficialChatRoom() {
     }
 }
 
+function getActiveRoomShareLink() {
+    let roomId = activeChatRoomId;
+    if (!roomId) {
+        const req = findRequestById(selectedOfficialRequestId);
+        if (req && req.chat_room_id) roomId = req.chat_room_id;
+    }
+    if (!roomId) {
+        const bannerEl = document.getElementById("panel-active-room-id");
+        if (bannerEl && bannerEl.innerText && bannerEl.innerText !== "ROOM-0000") {
+            roomId = bannerEl.innerText;
+        }
+    }
+    if (!roomId) return null;
+    return `${window.location.origin}/?room=${encodeURIComponent(roomId)}`;
+}
+
+function copyShareableChatLink() {
+    const link = getActiveRoomShareLink();
+    if (!link) {
+        showToast("No active live chat room to share.", "error");
+        return;
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(link).then(() => {
+            showToast(`📋 Live Chat Room link copied to clipboard!`, "success");
+        }).catch(() => {
+            prompt("Copy this Live Chat link to share with customer:", link);
+        });
+    } else {
+        prompt("Copy this Live Chat link to share with customer:", link);
+    }
+}
+
+function emailShareableChatLink() {
+    const link = getActiveRoomShareLink();
+    const req = findRequestById(selectedOfficialRequestId);
+    const customerEmail = req ? req.user_email : "";
+    const officialName = currentLoggedInOfficial ? currentLoggedInOfficial.name : "Higher Official";
+    const subject = encodeURIComponent(`Live Chat Invitation: Support Inquiry ${req ? req.request_id : ''}`);
+    const body = encodeURIComponent(`Hello,\n\nI have created a secure Live Chat Room for your inquiry. Please join our conversation directly using this link:\n\n${link}\n\nBest regards,\n${officialName}`);
+    window.location.href = `mailto:${customerEmail}?subject=${subject}&body=${body}`;
+}
+
 function openActiveChatRoomModal() {
     const req = findRequestById(selectedOfficialRequestId);
     if (!req || !req.chat_room_id) {
@@ -833,10 +1037,12 @@ function openActiveChatRoomModal() {
 
 function openRoomModal(roomId, officialName, customerName) {
     activeChatRoomId = roomId;
+    const offName = officialName || "Higher Official";
+    const custName = customerName || "Customer";
     document.getElementById("room-header-id").innerText = roomId;
-    document.getElementById("room-header-participants").innerText = `${officialName} & ${customerName}`;
-    document.getElementById("room-badge-official").innerText = `👑 Higher Official: ${officialName}`;
-    document.getElementById("room-badge-customer").innerText = `🧑 Customer: ${customerName}`;
+    document.getElementById("room-header-participants").innerText = `${offName} & ${custName}`;
+    document.getElementById("room-badge-official").innerText = `👑 Higher Official: ${offName}`;
+    document.getElementById("room-badge-customer").innerText = `🧑 Customer: ${custName}`;
     document.getElementById("group-chat-modal").classList.remove("hidden");
 
     reloadRoomMessages();

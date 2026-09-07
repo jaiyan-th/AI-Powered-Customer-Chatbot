@@ -33,7 +33,8 @@ from backend import (
     get_chat_room_messages,
     send_chat_room_message,
     official_start_call,
-    official_complete_call
+    official_complete_call,
+    escalate_inquiry_to_official
 )
 
 init_db()
@@ -92,6 +93,13 @@ class ReviewPayload(BaseModel):
     service_feedback: Optional[str] = ""
     unresolved_details: Optional[str] = ""
 
+class EscalateInquiryPayload(BaseModel):
+    user_name: Optional[str] = "Customer"
+    user_email: str
+    user_phone: Optional[str] = ""
+    query: str
+    category: Optional[str] = "General"
+
 # -----------------------------------------------------------------------------
 # REST Endpoints
 # -----------------------------------------------------------------------------
@@ -102,6 +110,21 @@ async def chat_endpoint(payload: ChatRequest):
         raise HTTPException(status_code=400, detail="Query cannot be empty.")
     result = chat_with_bot(payload.query, payload.email or "customer@example.com", payload.category)
     return result
+
+@app.post("/api/escalate-to-official")
+async def escalate_to_official_endpoint(payload: EscalateInquiryPayload):
+    if not payload.query.strip():
+        raise HTTPException(status_code=400, detail="Query cannot be empty.")
+    if not payload.user_email.strip():
+        raise HTTPException(status_code=400, detail="User email is required.")
+    res = escalate_inquiry_to_official(
+        user_name=payload.user_name or "Customer",
+        user_email=payload.user_email,
+        user_phone=payload.user_phone or "Not Provided",
+        query_text=payload.query,
+        category=payload.category
+    )
+    return res
 
 @app.post("/api/verify-otp")
 async def verify_otp_endpoint(payload: VerifyOTPPayload):

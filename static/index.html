@@ -457,16 +457,25 @@
                                 <h2 class="panel-issue-title" id="panel-issue-title">Admin Access & RBAC Issue</h2>
 
                                 <!-- User Customer Profile Card -->
-                                <div class="panel-customer-card">
+                                <div class="panel-customer-card" style="padding:12px 14px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;display:flex;gap:12px;align-items:center;">
                                     <div class="customer-avatar-img" id="panel-customer-avatar">AC</div>
-                                    <div class="customer-info-meta">
-                                        <div class="customer-name" id="panel-customer-name">Alice Chen</div>
-                                        <div class="customer-role" id="panel-customer-role">VP Engineering @ Tech.io</div>
+                                    <div class="customer-info-meta" style="flex:1;">
+                                        <div class="customer-name" id="panel-customer-name" style="font-weight:800;font-size:0.95rem;color:#0F172A;">Alice Chen</div>
+                                        <div style="font-size:0.78rem;color:#475569;margin-top:2px;">
+                                            <span>✉️ <strong id="panel-customer-email">a.chen@tech.io</strong></span> &bull; 
+                                            <span>📞 <strong id="panel-customer-phone">+1 (555) 0199</strong></span>
+                                        </div>
+                                        <div class="customer-role" id="panel-customer-role" style="font-size:0.72rem;color:#64748B;margin-top:2px;">Enterprise Member</div>
                                     </div>
                                     <div class="customer-tags-row">
-                                        <span class="plan-pill">Enterprise</span>
-                                        <span class="ltv-pill">LTV: $42k</span>
+                                        <span class="plan-pill" id="panel-customer-plan">Customer</span>
                                     </div>
+                                </div>
+
+                                <!-- Customer Full Inquiry Box -->
+                                <div style="background:#FFFFFF;border:1px solid #E2E8F0;border-left:4px solid #4338CA;border-radius:8px;padding:10px 12px;margin:10px 0;">
+                                    <div style="font-size:0.7rem;font-weight:800;color:#64748B;letter-spacing:0.5px;">CUSTOMER INQUIRY DETAILS</div>
+                                    <div id="panel-customer-full-query" style="font-size:0.83rem;color:#1E293B;margin-top:4px;white-space:pre-wrap;line-height:1.4;"></div>
                                 </div>
 
                                 <!-- Detected Vectors -->
@@ -499,19 +508,27 @@
                                         <span class="initiator-badge" id="panel-conv-status">AWAITING ACTION</span>
                                     </div>
                                     <p class="initiator-desc">
-                                        As the assigned Higher Official, you can initiate a live conversation with this customer. Create a collaborative chat room (an invitation is dispatched to their email) or start a direct voice call.
+                                        As the assigned Higher Official, you can initiate a live conversation with this customer. Create a collaborative live chat room (and share the link directly with the customer) or start a direct voice call.
                                     </p>
                                     <div class="initiator-btn-row">
                                         <button type="button" class="btn-initiate-chat" id="btn-initiate-room" onclick="initiateOfficialChatRoom()">
-                                            💬 Create Chat Room & Invite Customer
+                                            💬 Create Live Chat & Share Link
                                         </button>
                                         <button type="button" class="btn-initiate-call" onclick="initiateOfficialCall()">
                                             📞 Start Call with Customer
                                         </button>
                                     </div>
-                                    <div id="room-active-banner" class="room-active-notice hidden">
-                                        <span>🎉 Active Room: <strong id="panel-active-room-id">ROOM-0000</strong> (Invite emailed to customer)</span>
-                                        <button type="button" class="btn-join-room-small" onclick="openActiveChatRoomModal()">Enter Live Room ➔</button>
+                                    <div id="room-active-banner" class="room-active-notice hidden" style="background:#ECFDF5;border:1px solid #6EE7B7;border-radius:10px;padding:12px;margin-top:10px;">
+                                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                                            <span style="font-weight:800;color:#065F46;font-size:0.82rem;">🟢 LIVE CHAT ROOM ACTIVE: <code id="panel-active-room-id" style="background:#D1FAE5;padding:2px 6px;border-radius:4px;color:#047857;">ROOM-0000</code></span>
+                                            <button type="button" class="btn-join-room-small" style="background:#059669;color:#fff;border:none;padding:5px 12px;border-radius:6px;font-weight:700;cursor:pointer;font-size:0.76rem;" onclick="openActiveChatRoomModal()">Enter Live Room ➔</button>
+                                        </div>
+                                        <div style="display:flex;align-items:center;gap:8px;background:#FFFFFF;border:1px solid #A7F3D0;border-radius:6px;padding:6px 10px;">
+                                            <span style="font-size:0.75rem;color:#065F46;font-weight:700;white-space:nowrap;">Share Link:</span>
+                                            <input type="text" id="panel-share-link-input" readonly style="flex:1;border:none;background:transparent;font-size:0.75rem;color:#1E293B;outline:none;" value="">
+                                            <button type="button" onclick="copyShareableChatLink()" style="background:#10B981;color:#fff;border:none;padding:4px 10px;border-radius:4px;font-size:0.72rem;font-weight:700;cursor:pointer;white-space:nowrap;">📋 Copy Link</button>
+                                            <button type="button" onclick="emailShareableChatLink()" style="background:#E0E7FF;color:#4338CA;border:none;padding:4px 10px;border-radius:4px;font-size:0.72rem;font-weight:700;cursor:pointer;white-space:nowrap;">✉️ Email Customer</button>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -519,20 +536,24 @@
                                 <div class="official-live-chat-box">
                                     <div class="input-hdr-row">
                                         <span style="display:flex;align-items:center;gap:6px;color:#3730A3;font-weight:800;">
-                                            👑 Reply Live to Customer Chat:
+                                            👑 Official Resolution & Live Reply:
                                         </span>
                                         <button class="btn-link-action" onclick="applyAIDraft()">Use AI Draft</button>
                                     </div>
                                     <textarea id="desk-response-input" placeholder="Type message to send directly to customer chat as Higher Official..."></textarea>
                                     
                                     <div class="official-actions-row">
-                                        <button type="button" class="btn-send-official-msg" onclick="sendOfficialLiveReply()">
+                                        <button type="button" class="btn-send-official-msg" id="btn-send-official-reply" onclick="sendOfficialLiveReply()">
                                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                                             Send to Customer
                                         </button>
-                                        <button type="button" class="btn-resolve-ticket-secondary" onclick="markRequestCompleted()">
-                                            Mark Completed
+                                        <button type="button" class="btn-resolve-ticket-secondary" id="btn-mark-request-solved" onclick="markRequestCompleted()">
+                                            ✅ Mark as Solved
                                         </button>
+                                    </div>
+                                    <div id="panel-completed-notes-box" class="hidden" style="margin-top:10px;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;padding:10px 12px;">
+                                        <div style="font-size:0.75rem;font-weight:800;color:#166534;">✅ SOLVED & COMPLETED RESOLUTION NOTES:</div>
+                                        <div id="panel-completed-notes-text" style="font-size:0.82rem;color:#15803D;margin-top:4px;"></div>
                                     </div>
                                 </div>
 
@@ -795,6 +816,7 @@
                     </div>
                 </div>
                 <div style="display:flex;align-items:center;gap:8px;">
+                    <button type="button" onclick="copyShareableChatLink()" style="background:#EEF2FF;border:1px solid #C7D2FE;color:#4338CA;padding:4px 10px;border-radius:6px;font-size:0.75rem;font-weight:700;cursor:pointer;">📋 Copy Share Link</button>
                     <span class="live-pill-green">● LIVE ROOM</span>
                     <button class="btn-close-modal" onclick="closeGroupChatModal()">✕</button>
                 </div>

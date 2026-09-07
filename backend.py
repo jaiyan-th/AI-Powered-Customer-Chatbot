@@ -155,52 +155,24 @@ def chat_with_bot(user_query: str, user_email: str = "customer@example.com", cat
             "score": 99.0
         }
 
-    # 2. Check for Privacy / Confidentiality / Executive Trigger
+    # 2. Check for Privacy / Confidentiality / Executive Trigger -> Prompt for contact details
     if is_privacy_confidentiality_query(user_query):
         official = get_designated_higher_official(category or "Executive", user_query)
-        request_id = f"REQ-{random.randint(1000, 9999)}"
-        auth_key = f"AUTH-{random.randint(1000, 9999)}"
-
-        conn = get_connection()
-        cursor = conn.cursor()
-        summary = f"Confidential Inquiry: {user_query[:55]}..."
-        ai_draft = f"Hi {user_name}, I have reviewed your confidential inquiry regarding '{user_query[:40]}...'. I am handling this personally under Case {request_id}."
-
-        cursor.execute("""
-            INSERT INTO requests (
-                request_id, auth_key, user_name, user_role, user_email, user_phone, query_title, query_text, query_summary,
-                status, priority, is_confidential, department, vectors, assigned_official_name, assigned_official_title,
-                assigned_official_email, assigned_official_phone, ai_draft, confidence_score, created_at
-            ) VALUES (?, ?, ?, 'Enterprise Member', ?, '+1 (415) 890-2134', ?, ?, ?, 'Pending', 'Urgent', 1, ?, '🔒 Privacy, 👑 Executive', ?, ?, ?, ?, ?, 98, CURRENT_TIMESTAMP);
-        """, (request_id, auth_key, user_name, user_email_clean, f"Confidential: {user_query[:35]}", user_query, summary, official['dept'], official['name'], official['title'], official['email'], official['phone'], ai_draft))
-        conn.commit()
-        conn.close()
-
-        response_text = (
-            f"🔒 **Forwarded to Higher Official (Privacy Protected)**\n\n"
-            f"Because this involves confidential enterprise data or executive policy, automated disclosure is restricted.\n\n"
-            f"📨 **Customer Information Dispatched to Official's Email:**\n"
-            f"• **Customer Name:** `{user_name}`\n"
-            f"• **Customer Email:** `{user_email_clean}`\n"
-            f"• **Inquiry Sent:** \"{user_query}\"\n\n"
-            f"👑 **Designated Higher Official:** `{official['name']}` ({official['title']})\n"
-            f"• **Official Email:** `{official['email']}`\n"
-            f"• **Direct Helpline:** `{official['phone']}`\n\n"
-            f"📧 **Request Tracking ID:** `{request_id}`\n\n"
-            f"*(When {official['name']} logs into their official account, they will review your inquiry and can start a **Group Chat Room** with an invite sent to your email, or initiate a direct **Call** with you.)*"
+        msg = (
+            f"🔒 **Confidential / Privacy Query Detected**\n\n"
+            f"Because this inquiry involves confidential enterprise records, security policies, or executive authorization, our automated chatbot cannot disclose this information.\n\n"
+            f"👑 **Assigned Higher Official:** `{official['name']}` ({official['title']})\n"
+            f"• **Official Email:** `{official['email']}`\n\n"
+            f"Please provide your **Full Name**, **Email Address**, and **Phone Number** below. Your inquiry will be dispatched directly to {official['name']}, who will review your case and contact you via email and live session."
         )
-
-        log_message(request_id, user_email_clean, "assistant", "GlassSupport AI", response_text, badge="Dispatched to Official", department=official['dept'])
-
         return {
             "matched": False,
-            "badge": "Dispatched to Official",
+            "requires_contact": True,
+            "badge": "Official Escalation Required",
             "badge_type": "confidential_officer",
-            "request_id": request_id,
-            "auth_key": auth_key,
             "assigned_official": official,
-            "answer": response_text,
-            "score": None,
+            "query": user_query,
+            "answer": msg,
             "department": official['dept']
         }
 
@@ -218,51 +190,85 @@ def chat_with_bot(user_query: str, user_email: str = "customer@example.com", cat
             "department": match["department"]
         }
 
-    # 4. Fallback: Unresolvable query -> Forward details to Higher Official
+    # 4. Fallback: Unresolvable query -> Prompt customer for contact details to escalate to Higher Official
     official = get_designated_higher_official(category or "General", user_query)
+    msg = (
+        f"I couldn't find a verified technical match for your question in our knowledge base.\n\n"
+        f"👑 **Designated Higher Official:** `{official['name']}` ({official['title']})\n"
+        f"• **Official Email:** `{official['email']}`\n\n"
+        f"Please enter your **Full Name**, **Email Address**, and **Phone Number** below. Your inquiry will be forwarded immediately to {official['name']}'s official mailbox. The official will contact you via email, and can also start a direct live chat session with you."
+    )
+    return {
+        "matched": False,
+        "requires_contact": True,
+        "badge": "Official Escalation Required",
+        "badge_type": "unresolved_escalation",
+        "assigned_official": official,
+        "query": user_query,
+        "answer": msg,
+        "department": official['dept']
+    }
+
+def escalate_inquiry_to_official(user_name: str, user_email: str, user_phone: str, query_text: str, category: Optional[str] = None) -> Dict[str, Any]:
+    """Saves real customer contact details and creates a request assigned to a Higher Official."""
+    init_db()
+    user_email_clean = user_email.strip().lower()
+    user_name_clean = user_name.strip() or user_email_clean.split("@")[0].capitalize()
+    user_phone_clean = user_phone.strip() or "Not Provided"
+
+    official = get_designated_higher_official(category or "General", query_text)
     request_id = f"REQ-{random.randint(1000, 9999)}"
     auth_key = f"AUTH-{random.randint(1000, 9999)}"
 
     conn = get_connection()
     cursor = conn.cursor()
-    summary = f"Inquiry: {user_query[:55]}..."
-    ai_draft = f"Hi {user_name}, our AI chatbot could not resolve this automatically. I have received your request ({request_id}) and am connecting with you now."
+    summary = f"Inquiry: {query_text[:55]}..."
+    ai_draft = f"Hi {user_name_clean}, I have received your inquiry regarding '{query_text[:40]}...'. I am reviewing this personally under Case {request_id}."
+    is_conf = 1 if is_privacy_confidentiality_query(query_text) else 0
+    vectors = "🔒 Privacy, 👑 Executive" if is_conf else "🔗 Unresolved, ⚡ Escalation"
 
     cursor.execute("""
         INSERT INTO requests (
             request_id, auth_key, user_name, user_role, user_email, user_phone, query_title, query_text, query_summary,
             status, priority, is_confidential, department, vectors, assigned_official_name, assigned_official_title,
             assigned_official_email, assigned_official_phone, ai_draft, confidence_score, created_at
-        ) VALUES (?, ?, ?, 'Member', ?, '+1 (415) 890-2134', ?, ?, ?, 'Pending', 'Urgent', 0, ?, '🔗 Unresolved, ⚡ Escalation', ?, ?, ?, ?, ?, 90, CURRENT_TIMESTAMP);
-    """, (request_id, auth_key, user_name, user_email_clean, f"Inquiry: {user_query[:35]}", user_query, summary, official['dept'], official['name'], official['title'], official['email'], official['phone'], ai_draft))
+        ) VALUES (?, ?, ?, 'Member', ?, ?, ?, ?, ?, 'Pending', 'Urgent', ?, ?, ?, ?, ?, ?, ?, ?, 95, CURRENT_TIMESTAMP);
+    """, (
+        request_id, auth_key, user_name_clean, user_email_clean, user_phone_clean,
+        f"Inquiry: {query_text[:35]}", query_text, summary, is_conf, official['dept'], vectors,
+        official['name'], official['title'], official['email'], official['phone'], ai_draft
+    ))
     conn.commit()
     conn.close()
 
     escalation_text = (
-        f"I couldn't find an exact verified match in our active knowledge base.\n\n"
-        f"📨 **Customer Information Dispatched to Official's Email:**\n"
-        f"• **Customer Name:** `{user_name}`\n"
+        f"✅ **Request Successfully Forwarded to Higher Official!**\n\n"
+        f"📨 **Customer Information Dispatched to Official's Portal & Email:**\n"
+        f"• **Customer Name:** `{user_name_clean}`\n"
         f"• **Customer Email:** `{user_email_clean}`\n"
-        f"• **Inquiry Sent:** \"{user_query}\"\n\n"
+        f"• **Customer Phone:** `{user_phone_clean}`\n"
+        f"• **Inquiry Sent:** \"{query_text}\"\n\n"
         f"👑 **Designated Higher Official:** `{official['name']}` ({official['title']})\n"
         f"• **Official Email:** `{official['email']}`\n"
         f"• **Direct Helpline:** `{official['phone']}`\n\n"
-        f"📧 **Request Tracking ID:** `{request_id}`\n\n"
-        f"*(When {official['name']} logs into their official account, they will review your inquiry and can start a **Group Chat Room** with an invite sent to your email, or initiate a direct **Call** with you.)*"
+        f"📧 **Request Tracking ID:** `{request_id}`\n"
+        f"🔑 **Your Authentication Key:** `{auth_key}`\n\n"
+        f"*(When {official['name']} logs into their official account, they will review your inquiry, contact you via email, and can start a **Live Chat Room** or initiate a **Voice Call** directly with you.)*"
     )
 
-    log_message(request_id, user_email_clean, "assistant", "GlassSupport AI", escalation_text, badge="Dispatched to Official", score=None, department=official['dept'])
+    log_message(request_id, user_email_clean, "assistant", "GlassSupport AI", escalation_text, badge="Dispatched to Official", department=official['dept'])
 
     return {
-        "matched": False,
-        "badge": "Dispatched to Official",
-        "badge_type": "confidential_officer",
+        "success": True,
         "request_id": request_id,
         "auth_key": auth_key,
         "assigned_official": official,
-        "answer": escalation_text,
-        "score": None,
-        "department": official['dept']
+        "customer": {
+            "name": user_name_clean,
+            "email": user_email_clean,
+            "phone": user_phone_clean
+        },
+        "message": escalation_text
     }
 
 # -----------------------------------------------------------------------------
